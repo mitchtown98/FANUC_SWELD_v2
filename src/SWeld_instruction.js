@@ -110,12 +110,13 @@ function checkValidTpName(str) {
     return true;
   }
 }
-
+//=========================================================
 /**
  * Parses Int or Float User input.
  * @param {*} inputValue
  * @returns {boolean} use the boolean for validation.
  */
+//=========================================================
 function parameterCheck(inputValue) {
   let actualValue, minValue, maxValue;
 
@@ -234,13 +235,11 @@ function callBackHelpModalOk(btn) {
 function callBackTouchUpModal(btn) {
   var dialogString = "";
   if (btn.id == "start-tchp") {
-    //Set Index for StartPr
     $("#modalType").val(param.start);
     dialogString = "Ok to touchup PR[ " + param.start + " ]?";
   }
 
   if (btn.id == "end-tchp") {
-    //Set Index for EndPr
     $("#modalType").val(param.end);
 
     dialogString = "Ok to touchup PR[ " + param.end + " ]?";
