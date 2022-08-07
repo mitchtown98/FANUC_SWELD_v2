@@ -1,0 +1,95 @@
+------------------------------------------------------------------
+--CONST definition file
+------------------------------------------------------------------
+  SUCCESS      = 0                              --Used for Arg status
+  ER_WARN      = 0                              --Error Warning
+  ER_PAUSE     = 1                              --Error Pause
+  ER_ABORT     = 2                              --Error ABort
+  PRM_INT      = 1                              --Flag for INT Arg
+  PRM_REAL     = 2                              --Flag for REAL Arg
+  PRM_STRING   = 3                              --Flag for STRING Arg
+  MAX_STR_LEN  = 254                            --Max CHAR for STRINGS
+  I_MAX        = 9999                           --Max Integer Value
+  I_MIN        = 1                              --Min Integer Value
+  R_MAX        = 9999.99                        --Max Real Value
+  R_MIN        = 1                              --Min Real Value
+  UD = 'UD1:\'
+  MD = 'MD:\'
+  TP = '.TP'
+  LS = '.LS'
+  NULL_STRING  = ''                             --Empty String
+  TEMPLATE_TP  = 'IPL_FANUC_SWELD_GENTP'
+  SYS_VAR      = '*SYSTEM*'                     --Constant for using System variables
+  USER_LOG     = 'UD1:STITCHWELD_LOG.KL'        --Text File UD Logging
+  PIPE_FILE    = 'PIP:PIPELOG.DAT'              --PIP Logging
+  MD_LOG       = 'MD:MDLOG.TXT'
+  LPOS = 2
+  JPOS = 9
+  MAX_SEGMENTS = 32
+  SEG_POINTS = 16
+  MAX_WAIT = 30000
+  INCH_COEFF = 2.362
+  TP_GENERATOR = 'IPL_FANUC_SWELD_GENERATETP'
+
+  --ERROR MESSAGES FOR IPL_FANUC_SWELD_SET
+  ERROR_SETNAME = 'SWELD_SET:'
+  ERROR_NAMEGEN = 'SWELD_GENTP:'
+  NORMAL_FINISH = 'Finished Normal'
+  START_PR_ERRMSG = 'Starting PR Uninitialized'
+  END_PR_ERRMSG = 'Ending PR Uninitialized'
+  SEGMENT_LEN_ERRMSG = 'Total Segment Length Too Large'
+  SEGMENT_PITCH_ERRMSG = 'Pitch Number Error/Divide by Zero'
+
+  --ERROR MESSAGES FOR IPL_FANUC_SWELD_GENERATETP
+  TPE_CREATE_ERRMSG = 'TPE Create Failed'
+  TPE_ATTRIBUTE_ERRMSG = 'TP Set Attribute Failed'
+  TPP_OPEN_ERRMSG = 'TPP Open Failed'
+  TPE_SETPOS_ERRMSG = 'Set Post TPE Failed'
+  TPE_COMMENT_ERRMSG = 'Comment Instruction Failed'
+  TPE_POSINSTR_ERRMSG = 'Position Instruction Failed'
+  TPP_CLOSE_ERRMSG = 'Close TPE Failed'
+  GEN_CHILDSTROBE_ERRMSG = 'Strobe Never Received'
+
+    --ERROR CODES FOR IPL_FANUC_SWELD_GENERATETP
+  CREATE_STAT = 1
+  OPEN_STAT = 2
+  SET_ATT_STAT = 3
+  SET_POS_STAT = 4
+  COMMENT_INST_STAT = 5
+  POS_INST_STAT = 6
+  CLOSE_STAT = 7
+  STROBE_STAT = 8
+  LOOP_STAT = 9
+  --FOR TPE INSTRUCTIONS
+  GRP_ONE = 1
+  USERFRAME = 32
+  USERFRAME_NUMTYPE = 33
+  USERTOOL = 34
+  USERTOOL_NUMTYPE = 35
+  ASSIGN = 100
+  MAIN_START_POS = 99
+  STARTING_LINE_NUMBER = 12
+  WRT_DELAY = 15
+  OPT_SW = 1
+  MSB = 256
+  NOITEM = 0
+  TPCOMMENT = 30
+  POINT = 254
+  LINEAR = 2
+  NORMALPOS = 0
+  MMSEC = 1
+  INCHMIN = 3
+  SPEEDCONST = 0
+  FINE = 0
+  CNT = 128
+  OFFSETP = 205
+  PR_OFF  = 4
+  DIRECT  = 2
+  WELDSTART = 7
+  WELDEND = 8
+  MAX_COLLAB_SPD = 1000
+  COLLAB_SPD = 250
+  --LOCAL PRs
+  FIRST_LOCAL_PR = 10001
+
+  

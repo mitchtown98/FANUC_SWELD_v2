@@ -1,0 +1,43 @@
+------------------------------------------------------------------
+--   KL PROGRAM:   IPL_FANUC_SWELD_CFG
+
+--   SYNOPSIS:     Configuration for STITCHWELD Plugin
+--
+--   PARAMETERS:   Parameters
+--
+--
+--
+--   AUTHOR:       JDM
+
+--   DATE:         2022.06.18
+
+--   COMPANY:      FANUC
+
+------------------------------------------------------------------
+PROGRAM IPL_FANUC_SWELD_CFG
+------------------------------------------------------------------
+%COMMENT = 'Plugin Setup'
+--%ALPHABETIZE
+--%NOABORT = ERROR + COMMAND + TPENABLE
+%NOLOCKGROUP                         --Specifies no motion is locked
+--%UNINITVARS                        --Specifies that all vars are uninit by default
+
+VAR
+  st_pr         IN CMOS   : INTEGER
+  en_pr         IN CMOS   : INTEGER
+  sglen         IN CMOS   : REAL
+  sgoff         IN CMOS   : REAL
+  sgpitch       IN CMOS   : INTEGER
+  sgspd         IN CMOS   : INTEGER
+  sgspdunit     IN CMOS   : INTEGER
+  wprocedure    IN CMOS   : INTEGER
+  wsched        IN CMOS   : INTEGER
+  klstat        IN CMOS   : INTEGER
+  dbg_enb       IN CMOS   : BOOLEAN
+  tp_name       IN CMOS   : STRING[36]
+  vers          IN CMOS   : STRING[36]
+
+
+BEGIN
+END IPL_FANUC_SWELD_CFG
+

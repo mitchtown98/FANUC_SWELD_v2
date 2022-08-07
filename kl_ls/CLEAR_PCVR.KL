@@ -1,0 +1,90 @@
+------------------------------------------------------------------
+--   KL PROGRAM    CLEAR_PCVR.KL
+------------------------------------------------------------------
+--   SYNOPSIS:     This is an efficient way to clear Karel PC and
+--                 and VR files when debugging/testing.
+--
+--   PARAMETERS:   You must proved the program name in SR[1]    
+--
+--
+--
+--   AUTHOR:       Jason Mitchell
+
+--   DATE:         2021.Nov.29 @ 1140
+
+--   COMPANY:      FANUC SOE
+
+------------------------------------------------------------------
+
+PROGRAM CLEAR_PCVR
+%ALPHABETIZE
+%COMMENT = 'Clear Karel PC_VR'
+%NOPAUSE = ERROR + COMMAND + TPENABLE
+CONST
+  PC = '.PC'
+  VR = '.VR'
+VAR
+	--For TP args
+	prmNum:		  INTEGER
+	dataType:		INTEGER
+	dataType2:	INTEGER
+	intVal:			INTEGER
+	intVal2:		INTEGER
+	rVal:			  REAL
+	rVal2:			REAL
+	strVal:			STRING[32]
+	strValPC:		STRING[32]
+	strValVR:		STRING[32]
+
+	--For Clear
+	msgOk:			STRING[16]
+	msgErr:			STRING[16]
+	msgInd:			STRING[16]
+	status:			INTEGER
+	arg:				INTEGER
+	entry:			INTEGER
+
+
+------------------------------------------------------------------
+--                              MAIN                              
+------------------------------------------------------------------
+
+BEGIN
+	--Set messages
+	msgOk = 'Clear Complete'
+	msgErr = 'Clear Error'
+	msgInd = 'No File'
+	arg = 0
+	
+  GET_TPE_PRM(1, 3, intVal, rVal, strVal, status)
+
+	--Clear the User Screen
+	WRITE(CHR(137), CHR(128))
+	
+  strValPC = strVal + PC
+	strValVR = strVal + VR
+	--Display Args
+	WRITE('PC passed = ', strValPC, CR)
+	WRITE('VR passed = ', strValVR, CR)	
+
+	--Use First Arg to clear
+  CLEAR(strValPC, status)	
+	
+  DELAY(50)
+
+	IF(status <> 0) THEN
+		WRITE('PC ', strValPC, ' ', msgErr, CR)
+	ELSE
+		WRITE('PC ', strValPC, ' ', msgOk, CR)
+	ENDIF
+	
+	--Use Second Arg to clear	
+	CLEAR(strValVR, status)
+	
+	IF(status <> 0) THEN
+		WRITE('VR ', strValVR, ' ', msgErr, CR)
+	ELSE
+		WRITE('VR ', strValVR, ' ', msgOk, CR)
+	ENDIF
+
+END CLEAR_PCVR

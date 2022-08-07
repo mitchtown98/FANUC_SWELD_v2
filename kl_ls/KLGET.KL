@@ -1,0 +1,541 @@
+------------------------------------------------------------------
+--   KL PROGRAM:   KLGET
+
+--   SYNOPSIS:     Testing Bytes
+--
+--   PARAMETERS:   Parameters
+--
+--
+--
+--   AUTHOR:       JDm
+
+--   DATE:         2022.07.14
+
+--   COMPANY:      FANUC
+
+------------------------------------------------------------------
+PROGRAM KLGET
+------------------------------------------------------------------
+%COMMENT = 'Comment'
+%ALPHABETIZE
+--%NOABORT = ERROR + COMMAND + TPENABLE
+--%NOLOCKGROUP                         --Specifies no motion is locked
+--%UNINITVARS                          --Specifies that all vars are uninit by default
+%NOPAUSE = ERROR + COMMAND + TPENABLE  --Specifies Mask for Pausing
+                                           --ERROR: ignore pause severity
+                                           --COMMAND: ignore pause command
+                                           --TPENABLE: ignore paused req w/TP enabled
+--%DELAY                               --Time to delay program
+%INCLUDE KLEVKEYS                      --Key code defininition file
+%INCLUDE KLEVKMSK                      --Mask values used for form manager term_masks
+%INCLUDE KLEVCCDF                      --Character code constants 
+%INCLUDE KLIOUOP                       --Constants used for UOP I/O
+%INCLUDE KLIOTYPS                      --Constants defining I/O types
+------------------------------------------------------------------
+CONST                                  --Most constants commonly used. Comment out if not needed
+  SUCCESS      = 0                     --Used for Arg status
+  ER_WARN      = 0                     --Error Warning
+  ER_PAUSE     = 1                     --Error Pause
+  ER_ABORT     = 2                     --Error ABort
+  PRM_INT      = 1                     --Flag for INT Arg
+  PRM_REAL     = 2                     --Flag for REAL Arg
+  PRM_STRING   = 3                     --Flag for STRING Arg
+  MAX_STR_LEN  = 254                   --Max CHAR for STRINGS
+  I_MAX        = 9999                  --Max Integer Value
+  I_MIN        = 1                     --Min Integer Value
+  R_MAX        = 9999.99               --Max Real Value
+  R_MIN        = 1                     --Min Real Value
+  NULL_STRING  = ''                    --Empty String
+  LOG_HEADER   = 'KLGET'
+  SYS_VAR      = '*SYSTEM*'            --Constant for using System variables
+  USER_LOG      = 'UD1:KLGETLOG.KL'       --Pipe Logging
+  PIPE_LOG     = 'PIP:PIPELOG.DAT'     --Text File Logging
+  TD_LOG       = 'TD:KLGETLOGTD.KL'
+  MD = 'md:\'
+  TP = '.tp'
+  TP_NAME      = '_Z_GET'
+
+  --FOR TPE INSTRUCTIONS
+  MAX_TIME = 10000
+  WRT_DELAY = 15
+  OPT_SW = 1
+  MSB = 256
+  NOITEM = 0
+  TPCOMMENT = 30
+  POINT = 254
+  LINEAR = 2
+  NORMALPOS = 0
+  MMSEC = 1
+  FINE = 0
+
+VAR
+  tpsgend           : XYZWPR
+  tpseg_off         : XYZWPR  
+  tpsgstart         : XYZWPR   
+  tpswstart         : XYZWPR   
+  tpvoff            : XYZWPR   
+  tpseg_start       : ARRAY[32] OF XYZWPR
+  tpseg_end         : ARRAY[32] OF XYZWPR
+  tpsgspd           : INTEGER
+  tpp_name          : STRING[36]
+  time_out          : BOOLEAN
+  seg_array         : ARRAY[32] OF XYZWPR
+  child_recv_strobe : INTEGER
+  entry             : INTEGER
+  genstat           : INTEGER
+  debug             : INTEGER
+  total_segments    : INTEGER
+  length            : INTEGER
+  tp_line_num       : INTEGER
+  tp_pos_num        : INTEGER
+  open_id           : INTEGER
+  status            : INTEGER
+  fstatus           : INTEGER
+  byte_num          : INTEGER
+  cnt               : INTEGER
+  i                 : INTEGER
+  k                 : INTEGER
+  len               : INTEGER
+  line_count        : INTEGER
+  main_count        : INTEGER
+  lin_num           : INTEGER
+  pos_num           : INTEGER
+  buff_size         : INTEGER
+  char_int          : INTEGER
+  byte_out          : ARRAY[255] OF BYTE
+  byte_raw          : ARRAY[128] OF BYTE
+  char_byte         : ARRAY[128] OF BYTE
+  byte_full         : ARRAY[255] OF BYTE
+  suffix            : STRING[16]
+  check_tp          : STRING[254]
+  msg               : STRING[254]
+  str_ch            : STRING[16]
+  glog              : FILE
+  s_glog            : FILE
+
+
+------------------------------------------------------------------
+ROUTINE IntToString(i: INTEGER) : STRING
+------------------------------------------------------------------
+VAR
+	tempStr: 	STRING[254]
+BEGIN
+	CNV_INT_STR(i, 1, 0, tempStr)
+	
+	RETURN(tempStr)
+END IntToString  
+
+------------------------------------------------------------------  
+ROUTINE LOG_TIME(timeOut: STRING) 
+------------------------------------------------------------------  
+VAR
+	timeIn:		INTEGER
+	secInt:		INTEGER
+	secStr:		STRING[4]
+BEGIN 
+	--Built In
+	GET_TIME(timeIn)
+	--Built Int
+	CNV_TIME_STR(timeIn, timeOut)
+	
+	--Built it to Get the 1st sub string
+	--source, length of sub at start index, len of string
+	timeOut = SUB_STR(timeOut, 1, 15)
+	
+	--Concat String
+	timeOut = timeOut + ' : '
+	
+	--Get Seconds
+	secInt = timeIn AND 31
+	secInt = secInt * 2
+	
+	CNV_INT_STR(secInt, 2,0, secStr)
+	
+	--Built in to Get 2nd sub string for seconds
+	secStr = SUB_STR(secStr, 2, 2)
+	
+	IF timeIn < 10 THEN
+		secStr = ' 0 ' + secStr
+	ENDIF
+	
+	--Final String
+	timeOut = timeOut + secStr
+END LOG_TIME
+
+
+------------------------------------------------------------------  
+ROUTINE LogStart(inFile : FILE; msg : STRING; debug : INTEGER) 
+------------------------------------------------------------------  
+VAR
+  status:  INTEGER
+  getTime: STRING[18]
+BEGIN
+	--If Debug is not 1, then no debugging
+	IF UNINIT(debug) THEN debug = 0; ENDIF  	
+	IF debug <> 0 THEN
+		OPEN FILE inFile('AP',TD_LOG)
+		status = IO_STATUS(inFile)
+
+		IF(status <> 0)THEN
+			WRITE('Could not open : ', TD_LOG, CR)
+		ELSE
+			LOG_TIME(getTime)
+			WRITE inFile('===== ',msg + ' AT: ',getTime,' =====', CR)      
+      WRITE inFile(CR)
+      CLOSE FILE inFile
+		ENDIF				
+	ENDIF
+END LogStart
+
+------------------------------------------------------------------  
+ROUTINE LogAppend(inFile : FILE; header, msg : STRING; debug : INTEGER) 
+------------------------------------------------------------------  
+VAR
+  status:  INTEGER
+  getTime: STRING[18]
+BEGIN
+	--If Debug is not 1, then no debugging
+	IF UNINIT(debug) THEN debug = 0; ENDIF  	
+	IF(debug <> 0)THEN
+      OPEN FILE inFile('AP', TD_LOG)
+			WRITE inFile(header + ' : ' + msg, CR)
+      CLOSE FILE inFile
+	ENDIF		
+END LogAppend
+
+------------------------------------------------------------------  
+ROUTINE LogEnd(inFile : FILE; msg : STRING) --finalize klfileging
+------------------------------------------------------------------ 
+VAR
+  timeToLog: STRING[18]
+
+BEGIN
+  OPEN FILE inFile('AP',TD_LOG)
+	LOG_TIME(timeToLog)
+  WRITE inFile(CR)
+	WRITE inFile('===== ' + msg + ' At ' + timeToLog + ' =====', CR)
+  WRITE inFile(CR)
+	CLOSE FILE inFile
+END LogEnd
+
+ROUTINE MotionDetails(input : ARRAY OF BYTE) : STRING
+VAR 
+  i_case : INTEGER
+  outstring: STRING[254]
+BEGIN
+  i_case = input[2]
+  SELECT i_case OF
+    CASE(1):
+      outstring = 'joint'
+
+    CASE(2):
+      outstring = 'linear'
+    ELSE:
+      outstring = ' interpolation type unknown'
+  ENDSELECT
+      
+
+  i_case = input[3]
+  SELECT i_case OF
+    CASE(0):
+      outstring = outstring + ' normal position'
+
+    CASE(1):
+      outstring = outstring + ' position register'
+    ELSE:
+      outstring = ' Pos type unknown'
+  ENDSELECT
+
+   i_case = input[6]
+  SELECT i_case OF
+    CASE(0):
+      outstring = outstring + ' CONST speed'
+
+    CASE(64):
+      outstring = outstring + ' R[]'
+
+    CASE(128):
+      outstring = outstring + ' R[ R[] ]'
+    ELSE:
+      outstring = ' speed type unknown'
+  ENDSELECT
+
+ i_case = input[8]
+  SELECT i_case OF
+    CASE(0):
+      outstring = outstring + ' % joint'
+
+    CASE(1):
+      outstring = outstring + ' mm/sec'
+    ELSE:
+      outstring = ' spd unit unkown'
+  ENDSELECT
+
+
+ i_case = input[9]
+  SELECT i_case OF
+    CASE(0):
+      outstring = outstring + ' FINE'
+
+    CASE(1):
+      outstring = outstring + ' CNT'
+    ELSE:
+      outstring = ' termination unkown'
+  ENDSELECT
+  
+  RETURN(outstring)
+
+END MotionDetails
+
+------------------------------------------------------------------
+ROUTINE u_GetInstrType(input: ARRAY OF BYTE) : STRING  --Comment
+------------------------------------------------------------------
+VAR
+  o_string : STRING[254]
+  i_case : INTEGER
+
+BEGIN
+  i_case = input[1]
+  SELECT i_case OF
+    CASE(3):
+      o_string = 'Register Assign'
+    CASE(30):
+      o_string = 'Comment'
+    CASE(150):
+      o_string = 'Process Logic'
+    CASE(254):
+      o_string = MotionDetails(input)
+      o_string = 'Motion: ' + o_string
+    CASE(255):
+      o_string = 'Empty Line'
+    
+    ELSE:
+      o_string = 'Undetermined'
+  ENDSELECT
+
+  RETURN(o_string)
+  
+END u_GetInstrType
+--------------------------------------------------End of u_GetInstrType---
+
+
+-----------------------------------------------------------------
+--                              MAIN                              
+------------------------------------------------------------------
+BEGIN
+  debug = 1
+  LogStart(glog, LOG_HEADER, debug)
+
+  -- --1-------------------------------------------------------------------
+  -- OPEN_TPE(TP_NAME, TPE_RWACC, TPE_NOREJ, open_id, status)
+
+  -- GET_ATTR_PRG(TP_NAME, AT_NUM_LINE, line_count, msg, status)
+
+  -- --GET_INST_TPE(open_id:INTEGER, lin_num:INTEGER, lin_data:BYTE, status:INTEGER)
+  -- lin_num = 1
+  -- GET_INST_TPE(open_id, lin_num, byte_out, status)
+
+  -- CLOSE_TPE(open_id, status)
+
+  -- OPEN FILE glog('AP', TD_LOG)
+  -- WRITE glog('================================', CR)
+  -- WRITE glog('Number of Lines = ', IntToString(line_count), CR)
+  -- WRITE glog('Display top comment', CR)
+  -- WRITE glog('================================', CR)
+  
+  -- k = 1
+  -- FOR i = 1 TO ARRAY_LEN(byte_out) DO 
+  --   IF(byte_out[i] < 255) THEN   
+  --     WRITE glog('[' + IntToSTring(i) + '] = ', byte_out[i], CR)
+  --     k = k + 1
+  --   ENDIF
+  -- ENDFOR
+
+  -- WRITE glog('================================', CR)
+  -- WRITE glog('Display comment to String', CR)
+  -- WRITE glog('================================', CR)
+  -- FOR i = 1 TO (k - 2) DO
+  --   str_ch = CHR((byte_out[i+1]))
+  --   WRITE glog(str_ch)    
+  -- ENDFOR  
+
+  -- WRITE glog(CR)
+  -- CLOSE FILE glog
+ --****************************************************************************************
+  OPEN_TPE(TP_NAME, TPE_RWACC, TPE_NOREJ, open_id, status)
+  GET_ATTR_PRG(TP_NAME, AT_NUM_LINE, line_count, msg, status)  
+  
+  FOR main_count = 1 TO line_count DO
+    GET_INST_TPE(open_id, main_count, byte_out, status)
+    --msg = u_GetInstrType(byte_out)
+
+    OPEN FILE glog('AP', TD_LOG)
+    WRITE glog('--================================', CR)
+    WRITE glog('Line ', IntToString(main_count), CR)
+
+    len = 1
+    FOR i = 1 TO ARRAY_LEN(byte_out) DO    
+     IF(byte_out[i] < 255) THEN 
+      len = len + 1
+      IF(byte_out[1] <> 30) THEN  
+       WRITE glog('[' + IntToSTring(i) +'] = ', byte_out[i], CR)         
+      ENDIF
+     ENDIF
+    ENDFOR
+
+    IF((byte_out[1]) = 30)THEN
+      FOR i = 1 TO (len - 3) DO
+        str_ch = CHR((byte_out[i + 1]))
+        WRITE glog(str_ch)   
+      ENDFOR  
+      WRITE glog(CR)
+      WRITE glog('--================================', CR)
+      WRITE glog(CR)
+    ENDIF
+
+    WRITE glog(CR)
+    CLOSE FILE glog
+  ENDFOR
+
+  CLOSE_TPE(open_id, status)
+
+  -- --2-------------------------------------------------------------------
+  -- OPEN_TPE(TP_NAME, TPE_RWACC, TPE_NOREJ, open_id, status)
+
+  -- --GET_INST_TPE(open_id:INTEGER, lin_num:INTEGER, lin_data:BYTE, status:INTEGER)
+  -- lin_num = 2
+
+  -- GET_INST_TPE(open_id, lin_num, byte_out, status)
+
+  -- CLOSE_TPE(open_id, status)
+
+  -- OPEN FILE glog('AP', TD_LOG)
+  -- WRITE glog('================================', CR)
+  -- WRITE glog('Display Normal Linear Position with FINE term', CR)
+  -- WRITE glog('================================', CR)
+
+  -- FOR i = 1 TO ARRAY_LEN(byte_out) DO    
+  --  IF(byte_out[i] < 255) THEN   
+  --    WRITE glog('[' + IntToSTring(i) + '] = ', byte_out[i], CR)    
+  --  ENDIF
+  -- ENDFOR
+  -- WRITE glog(CR)
+  -- CLOSE FILE glog
+ 
+  -- DELAY(10)
+  -- --3-------------------------------------------------------------------
+  -- OPEN_TPE(TP_NAME, TPE_RWACC, TPE_NOREJ, open_id, status)
+
+  -- --GET_INST_TPE(open_id:INTEGER, lin_num:INTEGER, lin_data:BYTE, status:INTEGER)
+  -- lin_num = 3
+  -- GET_INST_TPE(open_id, lin_num, byte_out, status)
+
+  -- CLOSE_TPE(open_id, status)
+
+  -- OPEN FILE glog('AP', TD_LOG)
+  -- WRITE glog('================================', CR)
+  -- WRITE glog('Display empty line', CR)
+  -- WRITE glog('================================', CR)
+
+  -- FOR i = 1 TO ARRAY_LEN(byte_out) DO    
+  --  IF(byte_out[i] < 255) THEN   
+  --    WRITE glog('[' + IntToSTring(i) + '] = ', byte_out[i], CR)    
+  --  ENDIF
+  -- ENDFOR
+
+  -- WRITE glog(CR)
+  -- CLOSE FILE glog
+
+  -- --4-------------------------------------------------------------------
+  -- OPEN_TPE(TP_NAME, TPE_RWACC, TPE_NOREJ, open_id, status)
+
+  -- --GET_INST_TPE(open_id:INTEGER, lin_num:INTEGER, lin_data:BYTE, status:INTEGER)
+  -- lin_num = 4
+  -- GET_INST_TPE(open_id, lin_num, byte_full, status)
+
+  -- CLOSE_TPE(open_id, status)
+
+  -- OPEN FILE glog('AP', TD_LOG)
+  -- WRITE glog('================================', CR)
+  -- WRITE glog('Display Weld Start', CR)
+  -- WRITE glog('================================', CR)
+
+  -- FOR i = 1 TO ARRAY_LEN(byte_full) DO    
+  --  IF(byte_full[i] < 255) THEN   
+  --    WRITE glog('[' + IntToSTring(i) + '] = ', byte_full[i], CR)    
+  --  ENDIF
+  -- ENDFOR
+
+  -- WRITE glog(CR)
+  -- CLOSE FILE glog
+
+  -- --5-------------------------------------------------------------------
+  -- OPEN_TPE(TP_NAME, TPE_RWACC, TPE_NOREJ, open_id, status)
+
+  -- --GET_INST_TPE(open_id:INTEGER, lin_num:INTEGER, lin_data:BYTE, status:INTEGER)
+  -- lin_num = 5
+  -- GET_INST_TPE(open_id, lin_num, byte_out, status)
+
+  -- CLOSE_TPE(open_id, status)
+
+  -- OPEN FILE glog('AP', TD_LOG)
+  -- WRITE glog('================================', CR)
+  -- WRITE glog('Bottom Comment', CR)
+  -- WRITE glog('================================', CR)
+
+  -- FOR i = 1 TO ARRAY_LEN(byte_out) DO    
+  --  IF(byte_out[i] < 255) THEN   
+  --    WRITE glog('[' + IntToSTring(i) + '] = ', byte_out[i], CR)    
+  --  ENDIF
+  -- ENDFOR
+
+  -- WRITE glog(CR)
+  -- CLOSE FILE glog
+
+  --5-------------------------------------------------------------------
+  -- OPEN_TPE(TP_NAME, TPE_RWACC, TPE_NOREJ, open_id, status)
+
+  -- --GET_INST_TPE(open_id:INTEGER, lin_num:INTEGER, lin_data:BYTE, status:INTEGER)
+  -- lin_num = 5
+  -- GET_RAW_INST(open_id, lin_num, byte_raw, status)
+  -- CLOSE_TPE(open_id, status)
+
+  -- OPEN FILE glog('AP', TD_LOG)
+  -- WRITE glog('Raw Bottom Comment', CR)
+
+  -- FOR i = 1 TO 128 DO    
+  --   WRITE glog('[' + IntToSTring(i) + '] = ', byte_raw[i], CR)
+  -- ENDFOR
+  -- WRITE glog(CR)
+  -- CLOSE FILE glog
+
+  --   --5-------------------------------------------------------------------
+  -- OPEN_TPE(TP_NAME, TPE_RWACC, TPE_NOREJ, open_id, status)
+
+  -- --GET_INST_TPE(open_id:INTEGER, lin_num:INTEGER, lin_data:BYTE, status:INTEGER)
+  -- lin_num = 2
+  -- GET_HEAD_TPE(open_id, 1, 2, buff_size, byte_out, status)
+
+  -- CLOSE_TPE(open_id, status)
+
+  -- OPEN FILE glog('AP', TD_LOG)
+  -- WRITE glog('================================', CR)
+  -- WRITE glog('GET HEAD TPE', CR)
+  -- WRITE glog('================================', CR)
+
+  -- buff_size = 128
+
+  -- WRITE glog('Buffer Size = ', IntToString(buff_size), CR)
+
+  -- FOR i = 1 TO 128 DO    
+  --   WRITE glog('[' + IntToSTring(i) + '] = ', byte_out[i], CR)
+  -- ENDFOR
+  -- WRITE glog(CR)
+  -- CLOSE FILE glog
+
+  LogEnd(glog, 'END')
+
+  COPY_FILE(TD_LOG, USER_LOG, TRUE, FALSE, status)  
+  DELETE_FILE(TD_LOG, FALSE, status)   
+  
+END KLGET

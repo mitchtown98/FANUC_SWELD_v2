@@ -1,0 +1,727 @@
+------------------------------------------------------------------
+--   KL PROGRAM:   IPL_FANUC_SWELD_GENERATETP
+
+--   SYNOPSIS:     This is a child process from SWELD_SET. This will
+--                 generate a TP of with weld segments from start
+--                 and end point.
+--   PARAMETERS:   N/A
+--
+--
+--
+--   AUTHOR:       JDM
+--
+--   DATE:         2022.07.13
+--
+--   COMPANY:      FANUC
+------------------------------------------------------------------
+PROGRAM IPL_FANUC_SWELD_GENERATETP
+------------------------------------------------------------------
+%COMMENT = 'SWELD KL'
+%PRIORITY = 1 								          -- Priority for task execution -> 0 is highest priority
+%TIMESLICE = 8 								          -- Time slicer for tasks having the same priority, 1 is highest.
+%DELAY = 8 								              -- Each 256ms a task is delayed by default 8ms
+%ALPHABETIZE
+--%NOABORT = ERROR + COMMAND + TPENABLE
+%NOLOCKGROUP                            --Specifies no motion is locked
+--%UNINITVARS                           --Specifies that all vars are uninit by default
+%NOPAUSE = ERROR + COMMAND + TPENABLE  --Specifies Mask for Pausing
+                                           --ERROR: ignore pause severity
+                                           --COMMAND: ignore pause command
+                                           --TPENABLE: ignore paused req w/TP enabled
+--%DELAY                                --Time to delay program
+%INCLUDE KLEVKEYS                       --Key code defininition file
+%INCLUDE KLEVKMSK                       --Mask values used for form manager term_masks
+%INCLUDE KLEVCCDF                       --Character code constants 
+%INCLUDE KLIOUOP                        --Constants used for UOP I/O
+%INCLUDE KLIOTYPS                       --Constants defining I/O types
+%INCLUDE KLEVTPE                        --Constants for TPE 
+------------------------------------------------------------------
+CONST                                  --Most constants commonly used. Comment out if not needed
+  %INCLUDE IPL_FANUC_SWELD_C
+  PGID = 'FANUC_SWELD'
+  SWELD_SET = 'IPL_FANUC_SWELD_SET'
+  LOG_HEADER = 'IPL_FANUC_SWELD_GENERATETP'
+  LOG_ERROR_HEADER = 'IPL_FANUC_SWELD_GENERATETP : ERROR'
+  GEN_LOG = 'UD1:GENLOG.KL'
+  TD_GEN  = 'TD:GENERATOR.LS'
+
+TYPE
+  ERROR_T = STRUCTURE
+	openfile_err  :	BOOLEAN
+	comment_err   :	BOOLEAN
+	genpos_err    :	BOOLEAN
+	genpos2_err   :	BOOLEAN
+	genpospr_err  :	BOOLEAN
+	weldstart_err :	BOOLEAN
+	weldend_err   :	BOOLEAN
+  segnumber_err : BOOLEAN
+  genloop_err   : BOOLEAN
+  genempty_err  : BOOLEAN
+  genuframe_err : BOOLEAN
+  genutool_err  : BOOLEAN
+ENDSTRUCTURE	
+VAR
+
+  genkl             : ERROR_T
+  seg_array         : ARRAY[32] OF XYZWPR
+  tp_start          : XYZWPR 
+  tp_segoff         : XYZWPR
+  tp_wsched         : INTEGER
+  tp_wprocedure     : INTEGER
+  tp_sgspd          : INTEGER
+  tp_spdunit        : INTEGER
+  line_num          : INTEGER
+  pos_num           : INTEGER
+  total_segments    : INTEGER
+  child_recv_strobe : INTEGER
+  entry             : INTEGER
+  genstat           : INTEGER
+  debug             : INTEGER  
+  open_id           : INTEGER
+  status            : INTEGER
+  byte_num          : INTEGER
+  j                 : INTEGER
+  k                 : INTEGER
+  slen              : INTEGER  
+  offset_pr         : INTEGER
+  program_status    : INTEGER
+  start_uf           : INTEGER
+  start_ut           : INTEGER
+  end_uf             : INTEGER
+  end_ut             : INTEGER
+  real_segments     : REAL
+  tp_inch_spd       : REAL 
+  time_out          : BOOLEAN
+  gen_error         : ARRAY [16] OF BOOLEAN
+  byte_in           : ARRAY[128] OF BYTE
+  empty_bytes       : ARRAY[32] OF BYTE
+  tpp_name          : STRING[36]
+  tpp_vers          : STRING[36]
+  check_tp          : STRING[254]
+  msg               : STRING[254]
+  glog              : FILE
+  genfile           : FILE
+
+------------------------------------------------------------------
+ROUTINE IntToString(i: INTEGER) : STRING
+------------------------------------------------------------------
+VAR
+	tempStr: 	STRING[254]
+BEGIN
+	CNV_INT_STR(i, 1, 0, tempStr)
+	
+	RETURN(tempStr)
+END IntToString  
+
+-----------------------------------------------------------------  
+ROUTINE RealToString_(r : REAL) : STRING
+------------------------------------------------------------------  
+VAR
+	--Set Max String Length
+	tempStr:	STRING[254]
+BEGIN
+	--Use Built in to Convert
+	CNV_REAL_STR(r, 5, 4, tempStr)
+	
+	--Return the Converted String
+	RETURN(tempStr)
+
+END RealToString_
+
+------------------------------------------------------------------  
+ROUTINE LogTime_(timeOut: STRING) FROM IPL_FANUC_SWELD_SET
+------------------------------------------------------------------
+
+------------------------------------------------------------------
+ROUTINE IncrementLineNumber_(line: INTEGER)
+------------------------------------------------------------------
+BEGIN
+  line_num = line + 1
+END IncrementLineNumber_
+
+------------------------------------------------------------------
+ROUTINE IncrementPosNumber_(posnum: INTEGER)
+------------------------------------------------------------------
+BEGIN
+  pos_num = posnum + 1
+END IncrementPosNumber_
+
+------------------------------------------------------------------  
+ROUTINE LogStart_(inFile : FILE; msg : STRING; debug : INTEGER) 
+------------------------------------------------------------------  
+VAR
+  status:  INTEGER
+  getTime: STRING[18]
+BEGIN
+	--If Debug is not 1, then no debugging
+	IF UNINIT(debug) THEN debug = 0; ENDIF  	
+	IF debug <> 0 THEN
+		OPEN FILE inFile('AP',GEN_LOG)
+		status = IO_STATUS(inFile)
+
+		IF(status <> 0)THEN
+			WRITE('Could not open : ', GEN_LOG,CR)
+		ELSE
+			LogTime_(getTime)
+			WRITE inFile('===== ',msg + ' AT: ',getTime,' =====', CR)      
+      WRITE inFile(CR)
+      CLOSE FILE inFile
+		ENDIF				
+	ENDIF
+END LogStart_
+
+------------------------------------------------------------------  
+ROUTINE LogAppend_(inFile : FILE; header, msg : STRING; debug : INTEGER) 
+------------------------------------------------------------------  
+VAR
+  status:  INTEGER
+BEGIN
+	--If Debug is not 1, then no debugging
+	IF UNINIT(debug) THEN debug = 0; ENDIF  	
+	IF(debug <> 0)THEN
+      OPEN FILE inFile('AP', GEN_LOG)
+			WRITE inFile(header + ' : ' + msg, CR)
+      CLOSE FILE inFile
+	ENDIF		
+END LogAppend_
+
+------------------------------------------------------------------  
+ROUTINE LogEnd_(inFile : FILE; msg : STRING) --finalize klfilogging
+------------------------------------------------------------------ 
+VAR
+  timeToLog: STRING[18]
+
+BEGIN
+  OPEN FILE inFile('AP',GEN_LOG)
+	LogTime_(timeToLog)
+  WRITE inFile(CR)
+	WRITE inFile('===== ' + msg + ' At ' + timeToLog + ' =====', CR)
+  WRITE inFile(CR)
+	CLOSE FILE inFile
+END LogEnd_
+
+------------------------------------------------------------------  
+ROUTINE CheckStatusBool_(status: INTEGER; error_bool: BOOLEAN)      --Check return status for errors
+------------------------------------------------------------------  
+BEGIN 
+  IF(status <> SUCCESS)THEN
+    --POST_ERR(status, '', 0, severity)
+    error_bool = TRUE
+  ENDIF
+END CheckStatusBool_
+
+------------------------------------------------------------------  
+ROUTINE CheckLoopStatus_(status: INTEGER) : INTEGER                 --Check return status for errors
+------------------------------------------------------------------  
+VAR
+  routine_stat : INTEGER
+BEGIN 
+  routine_stat = 0
+  IF(status <> SUCCESS)THEN
+    --POST_ERR(status, '', 0, severity)
+    routine_stat = 1
+  ENDIF
+  RETURN(routine_stat)
+END CheckLoopStatus_
+
+------------------------------------------------------------------
+ROUTINE ZeroByte_(input : ARRAY OF BYTE)                            --Zeros Byte Array
+------------------------------------------------------------------
+VAR 
+  i : INTEGER
+BEGIN
+  FOR i = 1 TO ARRAY_LEN(input) DO
+    input[i] = 255
+  ENDFOR
+END ZeroByte_
+
+------------------------------------------------------------------
+ROUTINE GenerateComment_(str : STRING; linenum: INTEGER) 
+------------------------------------------------------------------
+VAR
+  len           : INTEGER
+  i             : INTEGER
+BEGIN
+  len = STR_LEN(str)
+  slen= len
+  byte_in[1] = TPCOMMENT
+  FOR i = 1 TO len DO
+    byte_in[i + 1] = ORD(str, i)
+  ENDFOR  
+
+  byte_in[len + 2] = 0
+  SET_INST_TPE(open_id, linenum, OPT_SW, byte_in, (len + 2), status) 
+
+  CheckStatusBool_(status, genkl.comment_err)
+
+  IncrementLineNumber_(linenum)   
+
+END GenerateComment_
+
+------------------------------------------------------------------
+ROUTINE GenerateNormalPosition_(posnum, linenum, spd, spdunit: INTEGER; incr_pos: BOOLEAN)--Comment
+------------------------------------------------------------------
+VAR
+  r_stat : INTEGER
+BEGIN
+  ZeroByte_(byte_in)  
+
+  IF spdunit = 1 THEN
+    byte_in[8] = MMSEC                        --speed units
+  ENDIF
+
+  IF spdunit = 3 THEN
+    spd = TRUNC(spd * INCH_COEFF)
+    byte_in[8] = INCHMIN                      --speed units
+  ENDIF
+
+  byte_in[1] = POINT                          --motion
+  byte_in[2] = LINEAR                         --motion type
+  byte_in[3] = NORMALPOS                      --point/pr
+  byte_in[4] = posnum DIV MSB                 --HiByte for pos
+  byte_in[5] = posnum - (byte_in[4] * MSB)    --LoByte for pos
+  byte_in[6] = spd DIV MSB                    --HiByte for speed
+  byte_in[7] = spd - (byte_in[6] * MSB)       --LoByte for speed
+  byte_in[9] = FINE                           --termination type
+  byte_in[10] = 255                        
+  byte_num  = 10 
+
+  SET_INST_TPE(open_id, linenum, OPT_SW, byte_in, byte_num, status)
+  CheckStatusBool_(status, genkl.genpos_err)
+
+  IncrementLineNumber_(linenum) 
+
+  IF incr_pos = TRUE THEN 
+    IncrementPosNumber_(posnum)
+  ENDIF  
+
+END GenerateNormalPosition_
+
+------------------------------------------------------------------
+ROUTINE GeneratePositionWithOffset_(posnum, linenum, spd, spdunit, pr_index: INTEGER; incr_pos: BOOLEAN) --Creates a TPP Positon with Offset,PR[]
+------------------------------------------------------------------
+VAR
+  r_stat : INTEGER
+BEGIN
+  ZeroByte_(byte_in)  
+
+  IF spdunit = 1 THEN
+    byte_in[8] = MMSEC                          --speed units
+  ENDIF
+
+  IF spdunit = 3 THEN
+    spd = TRUNC(spd * INCH_COEFF)
+    byte_in[8] = INCHMIN                        --speed units
+  ENDIF
+
+  byte_in[1] = POINT                            --motion
+  byte_in[2] = LINEAR                           --motion type
+  byte_in[3] = NORMALPOS                        --point/pr
+  byte_in[4] = posnum DIV MSB                   --HiByte for pos
+  byte_in[5] = posnum - (byte_in[4] * MSB)      --LoByte for pos
+  byte_in[6] = spd DIV MSB                      --HiByte for speed
+  byte_in[7] = spd - (byte_in[6] * MSB)         --LoByte for speed
+  byte_in[9] = SPEEDCONST                       --termination type
+  byte_in[10] = FINE                            --value for CNT termination
+  byte_in[11] = OFFSETP                         
+  byte_in[12] = PR_OFF                          
+  byte_in[13] = DIRECT                         
+  byte_in[14] = pr_index DIV MSB                 
+  byte_in[15] = pr_index - (byte_in[14] * MSB)                            
+  byte_num  = 15 
+
+  SET_INST_TPE(open_id, (linenum), OPT_SW, byte_in, byte_num, status)
+  CheckStatusBool_(status, genkl.genpospr_err)  
+
+  IncrementLineNumber_(linenum)  
+
+  IF incr_pos = TRUE THEN 
+    IncrementPosNumber_(posnum)
+  ENDIF
+
+END GeneratePositionWithOffset_
+
+------------------------------------------------------------------
+ROUTINE GenerateWeldInstruction_(type_weld, linenum, procedure, schedule: INTEGER)  --Creates WeldStart or WeldEnd
+------------------------------------------------------------------
+BEGIN
+  byte_in[1] =  150
+  byte_in[2] =  0
+  byte_in[3] =  32
+  byte_in[4] =  1
+  byte_in[5] =  type_weld
+  byte_in[6] =  2
+  byte_in[7] =  0
+  byte_in[8] =  procedure
+  byte_in[9] =  2
+  byte_in[10] =  0
+  byte_in[11] =  schedule
+  byte_in[12] =  2
+  byte_in[13] =  0
+  byte_in[14] =  0
+  byte_in[15] =  2
+  byte_in[16] =  0
+  byte_in[17] =  0
+  byte_in[18] =  2
+  byte_in[19] =  0
+  byte_in[20] =  0
+  byte_in[21] =  2
+  byte_in[22] =  0
+  byte_in[23] =  0
+  byte_in[24] =  2
+  byte_in[25] =  0
+  byte_in[26] =  0
+  byte_in[27] =  2
+  byte_in[28] =  0
+  byte_in[29] =  0
+  byte_in[30] =  2
+  byte_in[31] =  0
+  byte_in[32] =  0
+  byte_in[33] =  2
+  byte_in[34] =  0
+  byte_in[35] =  0
+  byte_in[36] =  0
+  byte_num = 36
+
+  SET_INST_TPE(open_id, linenum, OPT_SW, byte_in, byte_num, status) 
+  CheckStatusBool_(status, genkl.weldstart_err) 
+
+  IncrementLineNumber_(linenum)   
+
+END GenerateWeldInstruction_
+
+------------------------------------------------------------------
+ROUTINE GenerateEmptyLine_(linenum: INTEGER)                      --Creates Empty Line
+------------------------------------------------------------------
+BEGIN
+  SET_INST_TPE(open_id, linenum, OPT_SW, empty_bytes, 0, status)
+
+  IncrementLineNumber_(linenum)   
+
+END GenerateEmptyLine_
+
+------------------------------------------------------------------
+ROUTINE GenerateUframe_(frame, linenum: INTEGER)
+------------------------------------------------------------------
+BEGIN
+  ZeroByte_(byte_in)
+
+  byte_in[1] =  USERFRAME
+  byte_in[2] =  ASSIGN
+  byte_in[3] =  1
+  byte_in[4] =  1
+  byte_in[5] =  frame
+  byte_num = 5
+
+  SET_INST_TPE(open_id, linenum, OPT_SW, byte_in, byte_num, status) 
+  CheckStatusBool_(status, genkl.genuframe_err) 
+
+  IncrementLineNumber_(linenum)
+
+END GenerateUframe_
+
+------------------------------------------------------------------
+ROUTINE GenerateUtool_(toolnum, linenum: INTEGER)
+------------------------------------------------------------------
+BEGIN
+  ZeroByte_(byte_in)
+
+  byte_in[1] =  USERTOOL
+  byte_in[2] =  ASSIGN
+  byte_in[3] =  1
+  byte_in[4] =  1
+  byte_in[5] =  toolnum
+  byte_num = 5
+
+  SET_INST_TPE(open_id, linenum, OPT_SW, byte_in, byte_num, status) 
+  CheckStatusBool_(status, genkl.genutool_err) 
+
+  IncrementLineNumber_(linenum)
+
+END GenerateUtool_
+
+------------------------------------------------------------------  
+ROUTINE CheckStatus_(status: INTEGER; severity: INTEGER)          --Check return status for errors
+------------------------------------------------------------------  
+BEGIN 
+  IF(status <> SUCCESS)THEN
+    --POST_ERR(status, '', 0, severity)
+    genstat = severity
+  ENDIF
+END CheckStatus_
+
+------------------------------------------------------------------
+ROUTINE CreateTpp_(tpp: STRING)                                   --Create New TPP
+------------------------------------------------------------------
+BEGIN
+ CREATE_TPE(tpp, PT_MNE_UNDEF, status)
+ CheckStatus_(status, CREATE_STAT)
+
+ SET_ATTR_PRG(tpp, AT_COMMENT, 1, 'SWELD TpGen', status)
+ CheckStatus_(status, SET_ATT_STAT)
+  
+END CreateTpp_
+
+------------------------------------------------------------------
+ROUTINE GenerateLsFile_(ls_name, version: STRING)                          --Create a new LS file with Header Information
+------------------------------------------------------------------
+VAR
+  gettime : INTEGER
+  timeString: STRING[18]
+BEGIN
+  --Built In
+	GET_TIME(gettime)
+	--Built In
+	CNV_TIME_STR(gettime, timeString)
+
+    OPEN FILE genfile('RW', TD_GEN)
+      WRITE genfile('/PROG ' + ls_name,CR)
+		  WRITE genfile('/ATTR',CR)	
+		  WRITE genfile('OWNER		= MNEDITOR;',CR)
+		  WRITE genfile('COMMENT		= "Sweld Gen Tp";',CR)
+		  WRITE genfile('PROG_SIZE	= 500;',CR)
+		  WRITE genfile('CREATE		= DATE 22-07-15  TIME 08:00:00;',CR)
+		  WRITE genfile('MODIFIED	= DATE 22-07-15  TIME 08:00:00;',CR)
+		  WRITE genfile('FILE_NAME	= ;',CR)
+		  WRITE genfile('VERSION		= 0;',CR)
+		  WRITE genfile('LINE_COUNT	= 14;',CR)
+		  WRITE genfile('MEMORY_SIZE	= 500;',CR)
+		  WRITE genfile('PROTECT		= READ_WRITE;',CR)
+		  WRITE genfile('TCD:  STACK_SIZE	= 0,',CR)
+		  WRITE genfile('      TASK_PRIORITY	= 50,',CR)
+		  WRITE genfile('      TIME_SLICE	= 0,',CR)
+		  WRITE genfile('      BUSY_LAMP_OFF	= 0,',CR)
+		  WRITE genfile('      ABORT_REQUEST	= 0,',CR)
+		  WRITE genfile('      PAUSE_REQUEST	= 0;',CR)
+		  WRITE genfile('DEFAULT_GROUP	= 1,*,*,*,*;',CR)
+		  WRITE genfile('CONTROL_CODE	= 00000000 00000000;',CR)
+      WRITE genfile('LOCAL_REGISTERS = 1,1,1;',CR)
+		  WRITE genfile('/APPL',CR)
+      WRITE genfile(CR)
+      WRITE genfile('AUTO_SINGULARITY_HEADER;',CR)
+      WRITE genfile('  ENABLE_SINGULARITY_AVOIDANCE    : TRUE;',CR)	
+      WRITE genfile('  ARC Welding Equipment : 1,*,*,*,*;',CR)	
+		  WRITE genfile('/MN',CR)
+      WRITE genfile(' 1: ! ********FANUC America********   ;',CR)
+      WRITE genfile(' 2: !   Auto Generated by SWELD       ;',CR)
+      WRITE genfile(' 3: !    Version ' + tpp_vers + ';     ',CR)
+      WRITE genfile(' 4: !    '+ timeString +'             ;',CR)
+      WRITE genfile(' 5: !    Store Offset in Local PR     ;',CR)
+      WRITE genfile(' 6: ! *****************************   ;',CR)
+      WRITE genfile(' 7: ;',CR)
+      WRITE genfile(' 8: ! Store Offset in Local PR;        ',CR)
+      WRITE genfile(' 9: PR[10001]=$[IPL_FANUC_SWELD_SET]SEG_OFF ;',CR)
+      WRITE genfile(' 10: ;',CR)
+      WRITE genfile(' 11: ! StartPR UF & UT;               ',CR)
+      WRITE genfile(' 12: ;',CR)
+      WRITE genfile(' 13: ;',CR)
+      WRITE genfile(' 14: !*****End of Stitch Weld*****;   ',CR)
+      WRITE genfile('/POS',CR)
+      WRITE genfile('/END',CR)
+    CLOSE FILE genfile
+    COPY_FILE(TD_GEN, MD + tpp_name + LS, TRUE, FALSE, status)  
+    DELETE_FILE(TD_GEN, FALSE, status) 
+  
+END GenerateLsFile_
+
+------------------------------------------------------------------
+ROUTINE InitializeProgram_
+------------------------------------------------------------------
+BEGIN
+  genstat = 0
+  program_status = 0
+  start_uf = 0
+  start_ut = 0
+  end_uf = 0
+  end_ut = 0
+  time_out = FALSE
+  genkl.openfile_err  = FALSE
+	genkl.comment_err   = FALSE 
+	genkl.genpos_err    = FALSE 
+	genkl.genpos2_err   = FALSE 
+	genkl.genpospr_err  = FALSE 
+	genkl.weldstart_err = FALSE 
+	genkl.weldend_err   = FALSE 
+	genkl.genpos_err    = FALSE 
+	genkl.genloop_err   = FALSE 
+  genkl.genempty_err  = FALSE 
+  genkl.genuframe_err = FALSE
+  genkl.genutool_err =  FALSE
+  check_tp = ''
+  ZeroByte_(byte_in)
+  ZeroByte_(empty_bytes)
+END InitializeProgram_
+
+------------------------------------------------------------------
+ROUTINE LogErrorStructure_(infile: FILE; dbug: INTEGER)
+------------------------------------------------------------------
+BEGIN
+  IF dbug = 1 THEN
+    OPEN FILE genfile('AP', GEN_LOG)
+    WRITE infile('OpenFile Error: ',genkl.openfile_err, CR)
+    WRITE infile('Comment Error: ',genkl.comment_err, CR)
+    WRITE infile('Gen Pos Error: ',genkl.genpos_err, CR)
+    WRITE infile('Gen Pos 2 Error: ',genkl.genpos2_err, CR)
+    WRITE infile('Gen Pos PR Error: ',genkl.genpospr_err, CR)
+    WRITE infile('Weld Start Error: ',genkl.weldstart_err, CR)
+    WRITE infile('Weld End Error: ',genkl.weldend_err, CR)
+    WRITE infile('Loop Error: ',genkl.genloop_err, CR)
+    WRITE infile('Empty Error: ',genkl.genempty_err, CR)
+    WRITE infile('UFrame Error: ',genkl.genuframe_err, CR)
+    WRITE infile('UTool Error: ',genkl.genutool_err, CR)
+    CLOSE FILE infile
+  ENDIF
+
+END LogErrorStructure_
+
+
+--****************************************************************************************
+--                                        MAIN                              
+--****************************************************************************************
+
+BEGIN
+  InitializeProgram_
+
+  LogStart_(glog, LOG_HEADER, debug)
+
+  POST_SEMA(1)
+  PEND_SEMA(2, MAX_WAIT, time_out)
+  ------------------------------------------------------------DO WORK IF STROBE RECEIVED
+
+  IF (child_recv_strobe = 1)THEN
+
+    check_tp = MD + tpp_name + TP
+    OPEN_TPE(check_tp, TPE_RWACC, TPE_NOREJ, open_id, status)      --CHECK IF TPP EXSITS
+
+    IF(status <> 0)THEN
+
+      DELETE_FILE(check_tp, FALSE, status)
+      DELAY(WRT_DELAY)
+      GenerateLsFile_(tpp_name, tpp_vers)
+
+    ELSE
+      CLOSE_TPE(open_id, status)
+      GenerateLsFile_(tpp_name, tpp_vers) 
+
+    ENDIF
+      -------------------------------------------------------------------OPEN
+    OPEN_TPE(tpp_name, TPE_RWACC, TPE_NOREJ, open_id, status)
+    CheckStatus_(status, OPEN_STAT) 
+
+    IF(total_segments >= 2 )THEN 
+
+      FOR j = 1 TO total_segments DO
+        SET_POS_TPE(open_id, j, (seg_array[j]), status, GRP_ONE)
+      ENDFOR
+
+      -- SET POSITION VALUE AND GET UFRAME, UTOOL
+      pos_num = MAIN_START_POS
+      SET_POS_TPE(open_id, pos_num, tp_start, status, GRP_ONE)
+      GET_POS_FRM(open_id, MAIN_START_POS, GRP_ONE, start_uf, start_ut, status)
+
+      line_num = STARTING_LINE_NUMBER
+
+      GenerateUframe_(start_uf, line_num)
+
+      GenerateUtool_(start_ut, line_num)
+
+      GenerateComment_(' StartPt', line_num)
+
+      GeneratePositionWithOffset_(pos_num, line_num, COLLAB_SPD, tp_spdunit, FIRST_LOCAL_PR, TRUE)
+
+      --CHANGE POSITION NUMBER BACK TO 1
+      pos_num = 1
+
+      GenerateEmptyLine_(line_num)
+          
+      -- TOTAL INSTRUCTION IS HALF OF THE NUMBER OF SEGMENTS
+      real_segments = (total_segments / 2)
+      total_segments = TRUNC(real_segments)
+
+      FOR k = 1 TO (total_segments) DO    
+
+        msg = ' *Segment' + IntToString(k) + '*'
+        GenerateComment_(msg, line_num)
+
+        GeneratePositionWithOffset_(pos_num, line_num, COLLAB_SPD, tp_spdunit, FIRST_LOCAL_PR, FALSE)
+
+        GenerateWeldInstruction_(WELDSTART, line_num, tp_wprocedure, tp_wsched)
+     
+        GenerateNormalPosition_(pos_num, line_num, tp_sgspd, tp_spdunit, TRUE)
+
+        GenerateNormalPosition_(pos_num, line_num, tp_sgspd, tp_spdunit, TRUE)
+
+        GenerateWeldInstruction_(WELDEND, line_num, tp_wprocedure, tp_wsched)
+
+        GenerateEmptyLine_(line_num)
+
+      ENDFOR 
+    ENDIF
+    CheckStatus_(genstat, LOOP_STAT)   
+
+    -------------------------------------------------------------------CLOSE 
+    CLOSE_TPE(open_id, status)
+    CheckStatus_(status, CLOSE_STAT) 
+
+    LogErrorStructure_(glog, debug) 
+
+    SET_VAR(entry, SWELD_SET, 'parent_recv_strobe', 0, status)  
+    POST_SEMA(3)
+  ELSE
+    status = 1
+    CheckStatus_(status, STROBE_STAT)
+  ENDIF 
+
+  -----------------------------------------------------------------------ERROR LABEL
+  ERROR_LABEL::
+  SELECT genstat OF
+    CASE(1):
+      LogAppend_(glog, LOG_ERROR_HEADER, TPE_CREATE_ERRMSG, debug)
+      WRITE TPERROR(CHR(cc_clear_win), ERROR_SETNAME, TPE_CREATE_ERRMSG, CR)
+
+    CASE(2):
+      LogAppend_(glog, LOG_ERROR_HEADER, TPE_ATTRIBUTE_ERRMSG, debug)
+      WRITE TPERROR(CHR(cc_clear_win), ERROR_SETNAME, TPE_ATTRIBUTE_ERRMSG, CR)
+
+    CASE(3):
+      LogAppend_(glog, LOG_ERROR_HEADER, TPP_OPEN_ERRMSG, debug)
+      WRITE TPERROR(CHR(cc_clear_win), ERROR_SETNAME, TPP_OPEN_ERRMSG, CR)
+
+    CASE(4):
+      LogAppend_(glog, LOG_ERROR_HEADER, TPE_SETPOS_ERRMSG, debug)
+      WRITE TPERROR(CHR(cc_clear_win), ERROR_SETNAME, TPE_SETPOS_ERRMSG, CR)
+
+    CASE(5):
+      LogAppend_(glog, LOG_ERROR_HEADER, TPE_COMMENT_ERRMSG, debug)
+      WRITE TPERROR(CHR(cc_clear_win), ERROR_SETNAME, TPE_COMMENT_ERRMSG, CR)
+
+    CASE(6):
+      LogAppend_(glog, LOG_ERROR_HEADER, TPE_POSINSTR_ERRMSG, debug)
+      WRITE TPERROR(CHR(cc_clear_win), ERROR_SETNAME, TPE_POSINSTR_ERRMSG, CR)
+
+    CASE(7):
+      LogAppend_(glog, LOG_ERROR_HEADER, TPP_CLOSE_ERRMSG, debug)
+      WRITE TPERROR(CHR(cc_clear_win), ERROR_SETNAME, TPP_CLOSE_ERRMSG, CR)
+
+    CASE(8):
+      LogAppend_(glog, LOG_ERROR_HEADER, GEN_CHILDSTROBE_ERRMSG, debug)
+      WRITE TPERROR(CHR(cc_clear_win), ERROR_SETNAME, GEN_CHILDSTROBE_ERRMSG, CR)
+
+    CASE(9):
+      LogAppend_(glog, LOG_ERROR_HEADER, 'Segment Number = 0', debug)
+      WRITE TPERROR(CHR(cc_clear_win), ERROR_SETNAME, ': Segment Number = 0', CR)
+
+    CASE(10):
+      LogAppend_(glog, LOG_ERROR_HEADER, 'Loop Gen Error', debug)
+      WRITE TPERROR(CHR(cc_clear_win), ERROR_SETNAME, ': Loop Gen Error', CR)
+
+    ELSE:
+      LogAppend_(glog, LOG_HEADER, NORMAL_FINISH, debug)
+      
+  ENDSELECT  
+
+  IF (debug = 1) THEN
+     LogEnd_(glog, 'IPL_FANUC_SWELD_GENERATETP End')    
+  ENDIF
+
+END IPL_FANUC_SWELD_GENERATETP

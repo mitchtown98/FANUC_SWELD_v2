@@ -1,0 +1,190 @@
+-- Example karel program
+
+program mpnlsvr
+
+%NOLOCKGROUP
+%NOABORT=ERROR+COMMAND
+%NOPAUSE=ERROR+COMMAND+TPENABLE
+%NOBUSYLAMP
+%ENVIRONMENT REGOPE
+%ENVIRONMENT SYSDEF
+%ENVIRONMENT KCLOP
+
+var
+
+-- Declare HTML parameter names and value
+  object  : string[12]
+  pname   : string[12]
+  operate : string[12]
+  index   : string[12]
+  value   : string[12]
+  URL     : string[128]
+  vname   : string[128]
+
+-- These are duplicates that will be used to 
+-- convert the input parameters to Upper case
+
+  uobject : string[12]
+  uoperate: string[12]
+  uindex  : string[12]
+  uvalue  : string[12]
+  upname  : string[12]
+  uvname  : string[128]
+
+-- Misc Variables
+
+  kcommand : string[126]
+ 
+  value_i : integer
+  value_r : real
+  index_i : integer
+  status  : integer
+  i       : integer
+  index_p : integer
+  entry   : integer
+
+  file1   : file
+  return_code : integer
+
+-- Convert input string to Uppercase for consistant comparison
+
+routine toupper(p_char: integer): string
+
+begin
+  if (p_char > 96) and (p_char < 123) then
+    p_char = p_char - 32
+  endif
+  return (chr(p_char))
+end toupper
+
+begin
+
+-- Good practice to check for uninitialized variables before using them
+
+  if uninit(object)  then object  = ''; endif
+  if uninit(operate) then operate = ''; endif
+  if uninit(index)   then index   = ''; endif
+  if uninit(value)   then value   = ''; endif
+  if uninit(pname)   then pname   = ''; endif 
+  if uninit(vname)   then vname   = ''; endif 
+ 
+-- Change all character of input parameters to uppercase for string comparision
+
+  uobject = ''
+  for i = 1 to str_len(object) do
+    uobject = uobject + toupper(ord(object, i))
+  endfor
+
+  uoperate = ''
+  for i = 1 to str_len(operate) do
+    uoperate = uoperate + toupper(ord(operate, i))
+  endfor
+
+  uindex = ''
+  for i = 1 to str_len(index) do
+    uindex = uindex + toupper(ord(index, i))
+  endfor
+
+  uvalue = ''
+  for i = 1 to str_len(value) do
+    uvalue = uvalue + toupper(ord(value, i))
+  endfor
+
+  upname = ''
+  for i = 1 to str_len(pname) do
+    upname = upname + toupper(ord(pname, i))
+  endfor
+
+  uvname = ''
+  for i = 1 to str_len(vname) do
+    uvname = uvname + toupper(ord(vname, i))
+  endfor
+
+-- Handle setting DOUTs
+
+  if (uobject = 'DOUT') then
+    if (uoperate = 'SET') then
+      cnv_str_int(uindex, index_i)
+      if (uvalue = 'ON') then
+        DOUT[index_i] = ON
+      endif
+      if (uvalue = 'OFF') then
+        DOUT[index_i] = OFF
+      endif
+    endif
+  endif
+
+-- Handle Setting OPOUTs
+
+  if (uobject = 'OPOUT') then
+    if (uoperate = 'SET') then
+      cnv_str_int(uindex, index_i)
+      if (uvalue = 'ON') then
+        OPOUT[index_i] = ON
+      endif
+      if (uvalue = 'OFF') then
+        OPOUT[index_i] = OFF
+      endif
+    endif
+  endif
+
+-- Handle Setting GOUTs
+
+  if (uobject = 'GOUT') then
+    if (uoperate = 'SET') then
+      cnv_str_int(uindex, index_i)
+      cnv_str_int(uvalue, value_i)
+      GOUT[index_i] = value_i
+    endif
+  endif
+
+-- Handle Setting Numreg values
+
+  if (uobject = 'NUMREG') then
+      cnv_str_int(uindex, index_i)
+    if (uoperate = 'SETINT') then
+      cnv_str_int(uvalue, value_i)
+      set_int_reg(index_i, value_i, status)
+    endif
+
+    if (uoperate = 'SETREAL') then
+      cnv_str_real(uvalue, value_r)
+      set_real_reg(index_i, value_r, status)
+    endif
+  endif
+
+-- Handle Running and Aborting a program
+
+  if (uobject = 'PROG') then
+    if (uoperate = 'RUN') then
+	kcommand = 'RUN '+ upname
+      KCL_no_wait (kcommand, status)
+    else 
+	kcommand = 'ABORT ' + upname
+	KCL_no_wait (kcommand, status)
+    endif
+  endif
+
+-- Handle Setting a System Variable
+
+  if (uobject = 'SYSVAR') then
+    if (uoperate = 'SETINT') then
+      cnv_str_int(uvalue, value_i)
+      set_var(entry, '*SYSTEM*', uvname, value_i, status)
+    endif
+
+    if (uoperate = 'SETREAL') then
+      cnv_str_real(uvalue, value_r)
+      set_var(entry, '*SYSTEM*', uvname, value_r, status)
+    endif
+
+    if (uoperate = 'SETSTR') then
+      set_var(entry, '*SYSTEM*', uvname, uvalue, status)
+    endif
+  endif
+
+-- Return a NO RESPONSE Required code
+
+  return_code = 204
+
+end mpnlsvr

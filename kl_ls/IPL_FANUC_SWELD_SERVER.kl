@@ -1,0 +1,135 @@
+------------------------------------------------------------------
+--   KL PROGRAM:   FANUC_SWELD_SERVER
+
+--   SYNOPSIS:     Stitch Weld Karel Interface
+--
+--   PARAMETERS:   Through HTTP GET Request
+--
+--
+--
+--   AUTHOR:       JDM
+
+--   DATE:         2022.07.05
+
+--   COMPANY:      FANUC
+
+------------------------------------------------------------------
+PROGRAM IPL_FANUC_SWELD_SERVER
+------------------------------------------------------------------
+%COMMENT = 'SWeld KL'
+%ALPHABETIZE
+%NOLOCKGROUP                            --Specifies no motion is locked
+%NOABORT = ERROR+COMMAND 
+%NOPAUSE = ERROR+COMMAND+TPENABLE       --Specifies Mask for Pausing
+                                        --ERROR: ignore pause severity
+                                        --COMMAND: ignore pause command
+                                        --TPENABLE: ignore paused req w/TP enabled
+--%DELAY                                --Time to delay program
+%NOBUSYLAMP
+%ENVIRONMENT REGOPE
+%ENVIRONMENT SYSDEF
+%ENVIRONMENT KCLOP
+%INCLUDE KLEVKEYS                      --Key code defininition file
+%INCLUDE KLEVKMSK                      --Mask values used for form manager term_masks
+%INCLUDE KLEVCCDF                      --Character code constants 
+%INCLUDE KLIOUOP                       --Constants used for UOP I/O
+%INCLUDE KLIOTYPS                      --Constants defining I/O types
+------------------------------------------------------------------
+CONST                                  --Most constants commonly used. Comment out if not needed
+  SUCCESS      = 0                     --Used for Arg status
+  NULL_STRING  = ''                    --Empty String
+  SYS_VAR      = '*SYSTEM*'            --Constant for using System variables
+  USER_LOG     = 'UD1:USERLOG.TXT'     --Pipe Logging
+  PIPE_LOG     = 'PIP:PIPELOG.DAT'     --Text File Logging
+  SWELD_START  = 1
+  SWELD_END    = 2
+
+VAR
+  index   : STRING[12]
+  ptype    : STRING[12]
+  uindex  : STRING[12]
+  uptype   : STRING[12]   
+  index_i :     INTEGER
+  ptype_i  :    INTEGER
+  status  :     INTEGER
+  i       :     INTEGER
+  axis_lim:     INTEGER
+  ovr_trv:      INTEGER
+  t_pos:        XYZWPREXT  
+  return_code:  INTEGER
+  
+------------------------------------------------------------------
+ROUTINE u_ToUpper(p_char: INTEGER): STRING  --Comment
+------------------------------------------------------------------
+BEGIN
+  IF (p_char > 96) and (p_char < 123) THEN
+    p_char = p_char - 32
+  ENDIF
+  RETURN (chr(p_char))
+END u_ToUpper
+
+------------------------------------------------------------------  
+ROUTINE CheckStatus_(status: INTEGER; msg_in: STRING)          --Check return status for errors
+------------------------------------------------------------------  
+BEGIN 
+  IF(status <> SUCCESS)THEN
+    --POST_ERR(status, '', 0, severity)
+    WRITE TPERROR(CHR(cc_clear_win), msg_in)
+  ENDIF
+END CheckStatus_
+  
+------------------------------------------------------------------
+--                              MAIN                              
+------------------------------------------------------------------
+BEGIN
+  IF uninit(index)THEN
+    index = '';
+  ENDIF
+
+  IF uninit(ptype)THEN 
+    ptype = '';
+  ENDIF
+
+  -- Change all character of input parameters to uppercase for string comparision
+  -- uindex = ''
+  -- FOR i = 1 to str_len(index) DO
+  --   uindex = uindex + u_ToUpper(ord(index, i))
+  -- ENDFOR
+
+  -- uptype = ''
+  -- FOR i = 1 to str_len(ptype) DO
+  --   uptype = uptype + u_ToUpper(ord(ptype, i))
+  -- ENDFOR
+
+  --CNV_STR_INT(uptype, ptype_i)
+  CNV_STR_INT(index, index_i)
+
+  t_pos = CURPOS(axis_lim, ovr_trv, 1)
+  SET_POS_REG(index_i, t_pos, status, 1)
+
+  CheckStatus_(status, 'SWELD SERVER failed CURRPOS')
+
+  
+  -- SELECT ptype_i OF
+  --   CASE(SWELD_START):
+  --      t_pos = CURPOS(axis_lim, ovr_trv, 1)
+  --      SET_POS_REG(index_i, t_pos, status, 1)
+
+  --   CASE(SWELD_END):
+  --      t_pos = CURPOS(axis_lim, ovr_trv, 1)
+  --      SET_POS_REG(en_pr, t_pos, status, 1)
+  
+  -- ENDSELECT
+  
+  -- IF (uobject = 'POSREG') THEN
+  --     CNV_STR_INT(uindex, index_i)
+  --     t_pos = CURPOS(axis_lim, ovr_trv, 1)
+  --     SET_POS_REG(index_i, t_pos, status, 1)
+  -- ENDIF
+
+
+
+ -- Return a NO RESPONSE Required code
+  return_code = 204
+  
+END IPL_FANUC_SWELD_SERVER

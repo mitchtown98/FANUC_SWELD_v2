@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="iso-8859-1">
+  <!-- <link rel="stylesheet"
+        href="/frh/ihmi/ihmicomponentstyl.css" />
+  <link rel="stylesheet"
+        href="/frh/ihmi/ihmicomponentposition.css@" /> -->
+  <link rel="stylesheet"
+        href="SWeld_mainstyle.css" />
+  <!-- <script src="/frh/jquery/js/jquery.js?version=V9.40179"></script> -->
+  <!--For Testing Locally-->
+  <script type="text/javascript"
+          src="/test/jquery-3.6.0.min.js"></script>
+
+  <title>Stitch Weld Detail</title>
+</head>
+
+<body>
+  <div class="illustration-container">
+    <p class="container-title">Stitch Weld Illustration</p>
+    <div class="illustration-box">
+      <img src="sweld-detail-main.png"
+           alt="Sweld Detail"
+           width="250px">
+    </div>
+    <div>
+      <ol type="A">
+        <li>Start PR[]<span class="label"> = Recorded start point.</span></li>
+        <li>End PR[]<span class="label"> = Recorded end point.</span></li>
+        <li>Weld Length<span class="label"> = Legth of Weld Bead.</span></li>
+        <li>Weld Pitch<span class="label"> = Number of Weld Beads.</span></li>
+        <li>Weld Speed<span class="label"> = Robot Speed during Arc On.</span></li>
+        <ul>
+          <li>Speed Unit<span> = mm/sec, in/min, or % speed</span></li>
+        </ul>
+      </ol>
+      <ul>
+        <li>Weld Procedure<span class="list-item"> = Index of Weld Procedure.</span></li>
+        <li>Weld Schedule<span class="list-item"> = Index of Configured Weld Parameters.</span></li>
+        <li>TP Program Name<span class="list-item"> = Name of the Generated TP program.</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="parameter-container">
+    <p class="container-title">Stitch Weld Parameters <button class="help-btn"
+              id="helpBtn"
+              onclick="callBackHelp()">&quest;</button></p>
+    <div class="grid-container">
+      <!--1 STARTING PR-->
+      <div class="item-full">
+        <label class="item-text"
+               for="setStart">Start PR</label>
+
+        <input type="number"
+               class="inputbox"
+               id="setStart"
+               min="1"
+               max="100"
+               onfocus="this.oldvalue=this.value;"
+               placeholder="1">
+        <button id="start-tchp"
+                class="cbutton"
+                onclick="callBackTouchUpModal(this)">
+          <img src="ihmicomponent_touch_up.png"
+               alt="Touch Up Icon"
+               width="54px"
+               height="54px"></button>
+        <label class="button-label"
+               for="start-tchp">Touch Up Start PR</label>
+
+        <!--2 ENDING PR-->
+        <div class="item-full">
+          <label class="item-text"
+                 for="setEnd">End PR</label>
+
+          <input type="number"
+                 class="inputbox"
+                 id="setEnd"
+                 min="1"
+                 max="100"
+                 onfocus="this.oldvalue=this.value;"
+                 placeholder="1">
+          <button id="end-tchp"
+                  class="cbutton"
+                  onclick="callBackTouchUpModal(this)">
+            <img src="ihmicomponent_touch_up.png"
+                 alt="Touch Up Icon"
+                 width="54px"
+                 height="54px"></button>
+          <label class="button-label"
+                 for="end-tchp">Touch Up End PR</label>
+        </div>
+      </div>
+    </div>
+    <!--START PR_END PR CONTAINER END-->
+
+    <hr class="split">
+
+    <!--3 WELD LENGTH-->
+    <div class="grid-container cut">
+      <div class="item low">
+        <label class="item-text"
+               for="setLen">Weld Length</label>
+      </div>
+      <div class="item low">
+        <input type="number"
+               class="inputbox"
+               id="setLen"
+               min="1.0"
+               max="100.0"
+               onfocus="this.oldvalue=this.value;"
+               placeholder="1">
+      </div>
+
+      <!--4 WELD PITCH-->
+      <div class="item low">
+        <label class="item-text"
+               for="setPitch">Weld Pitch</label>
+      </div>
+      <div class="item low">
+        <input type="number"
+               class="inputbox"
+               id="setPitch"
+               min="2"
+               max="20"
+               onfocus="this.oldvalue=this.value;"
+               placeholder="6.3">
+      </div>
+      <!--5 WELD PROCEDURE-->
+      <div class="item low">
+        <label class="item-text"
+               for="setProcedure">Weld Procedure</label>
+      </div>
+      <div class="item low">
+        <input type="number"
+               class="inputbox"
+               id="setProcedure"
+               min="90"
+               max="98"
+               onfocus="this.oldvalue=this.value;"
+               placeholder="96">
+      </div>
+
+      <!--6 WELD SCHEDULE-->
+      <div class="item low">
+        <label class="item-text"
+               for="setSched">Weld Sched</label>
+      </div>
+      <div class="item low">
+        <input type="number"
+               class="inputbox"
+               id="setSched"
+               min="1"
+               max="99"
+               onfocus="this.oldvalue=this.value;"
+               placeholder="1">
+      </div>
+
+      <!--7 WELD SPEED AND SPEED SELECT-->
+      <div class="item low">
+        <label class="item-text"
+               for="setSpeed">Weld Speed</label>
+      </div>
+      <div class="item low">
+        <input type="number"
+               class="inputbox"
+               id="setSpeed"
+               onfocus="this.oldvalue=this.value;"
+               placeholder="1">
+
+        <select id="speedSelect"
+                class="select-style">
+          <option value="0">MM/SEC</option>
+          <option value="3">INCH/MIN</option>
+          <option value="4">% SPEED</option>
+        </select>
+      </div>
+
+      <!--8 TPP NAME-->
+      <div class="item low">
+        <label class="item-text"
+               for="setName">TP Name</label>
+      </div>
+      <div class="item low">
+        <input class="inputbox string"
+               id="setName"
+               onfocus="this.oldvalue=this.value;"
+               placeholder="Name">
+      </div>
+    </div>
+    <!-- PARAMETER CONTAINER END-->
+
+    <!--DISPLAY CURRENT INSTRUCTION ARGUMENT-->
+    <div class="parameter-container-short">
+      <div class="container-title">Current Instruction Param</div>
+      <div class="grid-container">
+        <div class="info-box"
+             id="statusBox"></div>
+      </div>
+    </div>
+  </div>
+
+  <!--DIALOG POP UP FOR TOUCH PRs-->
+  <div>
+    <dialog class="modal"
+            id="modal">
+      <input hidden
+             id="modalType">
+      <p id="touchup-dialog">Ok to touch up PR?</p>
+      <button class="modal-button"
+              id="okBtn"
+              onclick="touchUpOk(this)">Ok
+      </button>
+      <button class="modal-button"
+              id="cancelBtn"
+              onclick="touchUpCancel(this)">Cancel</button>
+    </dialog>
+  </div>
+
+  <!--DIALOG POP UP FOR ERRORS-->
+  <div>
+    <dialog class="modal"
+            id="modal-err">
+      <input hidden
+             id="modalErrType">
+      <div id="error-header"
+           class="modal-header"></div>
+      <p id="error-cause"></p>
+      <p id="error-action"></p>
+      <button class="modal-button"
+              id="okErrBtn"
+              onclick="callBackModalOk(this)">Ok
+      </button>
+    </dialog>
+  </div>
+
+  <!--DIALOG POP UP FOR HELP-->
+  <div>
+    <dialog class="modal pophelp"
+            id="modal-help">
+      <input hidden
+             id="modalHelpType">
+      <div id="help-header"
+           class="modal-header help"></div>
+      <div>
+        <iframe src="./SWeld_help.htm"
+                frameBorder="0"
+                scrolling="no"
+                width="745px"
+                height="850px"></iframe>
+      </div>
+      <button class="modal-button"
+              id="okHelpBtn"
+              onclick="callBackHelpModalOk(this)">Ok
+      </button>
+    </dialog>
+  </div>
+
+  <script type="text/javascript"
+          src="SWeld_instruction.js"></script>
+</body>
+
+</html>

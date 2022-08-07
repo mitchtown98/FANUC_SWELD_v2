@@ -1,0 +1,685 @@
+/* v00042 */
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+div > iframe {
+  position: absolute;
+  height: 100%;
+}
+
+/* popupMessage */
+/* not exist funckey component */
+#divMain,
+#divPopupMain {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  bottom: 0px;
+}
+
+/* exist funckey component */
+#divMainOffsetFuncKey,
+#divPopupMainOffsetFuncKey {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  bottom: 89px;
+  overflow-y: auto;
+  min-width: 730px;
+}
+
+#divPopupMainOffsetFuncKey {
+  overflow-y: hidden;
+}
+
+#divPaneUp {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  /*When handleResize is included in the divPaneDown element.*/
+  bottom: 5px;
+  /*When handleResize is included in the divPaneUp element.*/
+  /*height:5px;*/
+}
+
+#divPaneLeft {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  /*When handleResize is included in the divPaneRight element.*/
+  right: 512px;
+  /* When handleResize is included in the divPaneLeft element.*/
+  /*width: 512px;*/
+}
+
+#divPaneRight {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  /*When handleResize is included in the divPaneRight element.*/
+  width: 512px;
+  /* When handleResize is included in the divPaneLeft element.*/
+  /*left: 512px;*/
+}
+
+#divUpArea {
+  position: absolute;
+  top: 35px;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+#divPaneDown {
+  position: absolute;
+  width: 100%;
+  left: 0;
+  bottom: 0;
+  background-color: #ffffff;
+  z-index: -10;
+  /*When handleResize is included in the divPaneDown element.*/
+  height: 5px;
+  /*When handleResize is included in the divPaneUp element.*/
+  /*top: 5px;*/
+}
+
+.popup-frame {
+  position: absolute;
+  top: 0px;
+  left: 0;
+  width: 100%;
+  bottom: 0;
+}
+
+.popup-frame-title-offset {
+  position: absolute;
+  top: 35px;
+  left: 0;
+  width: 100%;
+  bottom: 0;
+}
+
+.funckeys-frame {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 89px;
+  bottom: 0;
+}
+
+.touch.popup-frame > iframe,
+.touch.popup-frame-title-offset > iframe {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  min-width: 574px;
+  min-height: 354px;
+}
+
+.touch.fk-popup.popup-frame > iframe,
+.touch.fk-popup.popup-frame-title-offset > iframe {
+  min-width: 730px;
+  min-height: 0;
+}
+
+.mouse.popup-frame > iframe,
+.mouse.popup-frame-title-offset > iframe {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  min-width: 574px;
+  min-height: 354px;
+}
+
+.mouse.fk-popup.popup-frame > iframe,
+.mouse.fk-popup.popup-frame-title-offset > iframe {
+  min-width: 730px;
+  min-height: 0;
+}
+
+.popup-body {
+  background-color: transparent;
+}
+
+.popup-background {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  background-color: black;
+  *filter: alpha(opacity=50);
+  -ms-filter: "alpha(opacity=50)";
+  -moz-opacity: 0.5;
+  opacity: 0.5;
+}
+
+.touch .popup-box-frame {
+  position: relative;
+  margin: auto;
+  top: 68px;
+  box-shadow: 0 0 3px 1px black;
+  width: 566px;
+  height: 312px;
+}
+
+.touch .popup-box {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #e6e6e6;
+  outline: none;
+}
+
+.touch .popup-header-box {
+  /* no header label */
+  position: relative;
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+  height: 54px;
+}
+
+.touch.popup-has-header .popup-header-box {
+  /* has header label */
+  height: 74px;
+}
+
+.touch .popup-contents-area {
+  width: 100%;
+  text-align: center;
+  position: relative;
+  overflow: auto;
+  font-size: 24px;
+  height: calc(100% - 54px);
+}
+
+.touch.popup-has-header .popup-contents-area {
+  height: calc(100% - 54px - 20px);
+}
+
+.touch .popup-contents-area-alert {
+  overflow: hidden;
+}
+
+.touch .popup-label-header {
+  color: black;
+  font-size: 28px;
+}
+
+.mouse .popup-box-frame {
+  position: relative;
+  margin: auto;
+  top: 68px;
+  box-shadow: 0 0 3px 1px black;
+  width: 566px;
+  height: 312px;
+}
+
+.mouse .popup-box {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #e6e6e6;
+  outline: none;
+}
+
+.mouse .popup-header-box {
+  /* no header label */
+  position: relative;
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+  height: 36px;
+}
+
+.mouse.popup-has-header .popup-header-box {
+  /* has header label */
+  height: 56px;
+}
+
+.mouse .popup-contents-area {
+  width: 100%;
+  text-align: center;
+  position: relative;
+  overflow: auto;
+  font-size: 16px;
+  height: calc(100% - 36px);
+}
+
+.mouse.popup-has-header .popup-contents-area {
+  height: calc(100% - 36px - 20px);
+}
+
+.mouse .popup-contents-area-alert {
+  overflow: hidden;
+}
+
+.mouse .popup-label-header {
+  color: black;
+  font-size: 22px;
+}
+
+.popup-has-header .popup-label-header {
+  position: relative;
+  top: 20px;
+}
+
+.popup-label-header:empty {
+  display: none;
+}
+
+.popup-padding-area {
+  padding: 8px;
+}
+
+.popup-label-contents-help,
+.popup-label-contents-alert {
+  display: inline-block;
+  width: 100%;
+  word-wrap: break-word;
+}
+
+.popup-label-contents-help {
+  text-align: left;
+}
+
+.popup-label-frame-confirm {
+  height: 70%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.popup-label-contents-confirm {
+  display: inline-block;
+  width: 100%;
+  *width: 96%;
+  word-wrap: break-word;
+}
+
+.touch .popup-button-wrapper {
+  width: 100%;
+  max-height: 54px;
+  overflow: hidden;
+  position: absolute;
+  *left: 0;
+}
+
+.touch .popup-button-wrapper.popup-contents-overflow {
+  bottom: 10px;
+}
+
+.touch .popup-box .close-button-pos {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.mouse .popup-button-wrapper {
+  width: 100%;
+  max-height: 54px;
+  overflow: hidden;
+  position: absolute;
+  *left: 0;
+}
+
+.mouse .popup-button-wrapper.popup-contents-overflow {
+  bottom: 20px;
+}
+
+.mouse .popup-box .close-button-pos {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.popup-box .button.popup {
+  min-width: 18%;
+  margin-right: 3px;
+}
+
+.popup-box .button.hide {
+  display: none;
+}
+
+.hide {
+  display: none !important;
+}
+
+/* buttonToggleSidebar */
+.button-toggle-sidebar.touch {
+  float: right;
+  width: 108px;
+}
+
+.button-toggle-sidebar.mouse {
+  float: right;
+  width: 28px;
+  padding-left: 0px;
+  padding-right: 0px;
+}
+
+.sidebar-close .button-toggle-sidebar {
+  float: none;
+  *float: right;
+}
+
+.button-toggle-sidebar.mouse > .button-text {
+  position: relative;
+  bottom: 1px;
+  *bottom: 0px;
+}
+
+.wizard-base {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+#divWizardSidebar {
+  left: 0;
+  width: 224px;
+  background-color: #afbbc9;
+}
+
+#divWizardFrame {
+  left: 224px;
+  right: 0;
+}
+
+.sidebar-close #divWizardSidebar {
+  width: 0;
+}
+
+.sidebar-close #divWizardFrame {
+  left: 0;
+}
+
+.sidebar-close .wizard-box {
+  display: none;
+}
+
+/* function key */
+.func-keys {
+  position: absolute;
+  height: 89px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: black;
+  min-width: 730px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* screenWhole */
+.screen-whole {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background-color: black;
+  filter: alpha(opacity=50);
+  -moz-opacity: 0.5;
+  opacity: 0.5;
+}
+
+.screen-inner {
+  position: absolute;
+  top: 40%;
+  width: 100%;
+  color: #ffffff;
+  text-align: center;
+  font-size: 22px;
+}
+
+/* screen for echo */
+#screenEcho {
+  position: absolute;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  background-color: transparent;
+}
+
+.ificon-attribute {
+  background-position: 0 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-category {
+  background-position: -42px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-check {
+  background-position: -84px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-chgtyp {
+  background-position: -126px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-close {
+  background-position: -168px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-copy {
+  background-position: -210px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-delete {
+  background-position: -252px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-detail {
+  background-position: -294px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-download {
+  background-position: -336px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-draw {
+  background-position: -378px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-erase {
+  background-position: -420px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-exit {
+  background-position: -462px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-filter {
+  background-position: -504px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-func {
+  background-position: -546px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-invert {
+  background-position: -588px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-new {
+  background-position: -630px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-next-image {
+  background-position: -672px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-next-keys {
+  background-position: -714px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-next-page {
+  background-position: -756px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-next {
+  background-position: -798px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-ng {
+  background-position: -840px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-ok {
+  background-position: -882px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-open {
+  background-position: -924px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-prev-image {
+  background-position: -966px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-prev-page {
+  background-position: -1008px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-prev {
+  background-position: -1050px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-pullup {
+  background-position: -1092px 0;
+  height: 18px;
+  width: 18px;
+}
+
+.ificon-reset {
+  background-position: -1112px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-return {
+  background-position: -1154px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-save {
+  background-position: -1196px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-sync {
+  background-position: -1238px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-type {
+  background-position: -1280px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-uncheck {
+  background-position: -1322px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-undo {
+  background-position: -1364px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-wizard-back {
+  background-position: -1406px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-wizard-cancel {
+  background-position: -1448px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-wizard-finish {
+  background-position: -1490px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-wizard-next {
+  background-position: -1532px 0;
+  height: 40px;
+  width: 40px;
+}
+
+.ificon-sprite, .ificon-attribute, .ificon-category, .ificon-check, .ificon-chgtyp, .ificon-close, .ificon-copy, .ificon-delete, .ificon-detail, .ificon-download, .ificon-draw, .ificon-erase, .ificon-exit, .ificon-filter, .ificon-func, .ificon-invert, .ificon-new, .ificon-next-image, .ificon-next-keys, .ificon-next-page, .ificon-next, .ificon-ng, .ificon-ok, .ificon-open, .ificon-prev-image, .ificon-prev-page, .ificon-prev, .ificon-pullup, .ificon-reset, .ificon-return, .ificon-save, .ificon-sync, .ificon-type, .ificon-uncheck, .ificon-undo, .ificon-wizard-back, .ificon-wizard-cancel, .ificon-wizard-finish, .ificon-wizard-next {
+  background-image: url("/frh/ihmi/ificon.png?id=20181210151400");
+  background-repeat: no-repeat;
+}

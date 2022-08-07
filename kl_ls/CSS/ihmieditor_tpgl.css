@@ -1,0 +1,176 @@
+  .content_area {
+    position: absolute;
+    right: 25px;
+    top: 40px;
+  }
+  .menu_area {
+    position: relative;
+    margin-left: auto;
+    display: none;
+    background-color: rgba(60,60,60,0.89);
+    width: 370px;
+    flex-wrap: wrap;
+  }
+  .menu_icon {
+    width: 45px;
+    height: 45px;
+    margin: 5px;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    background-color: transparent;
+  }
+  .menu_icon_selected {
+    background-color: #0e6eb8;
+  }
+  .menu_open_icon {
+    position: relative;
+    width: 45px;
+    height: 45px;
+    margin-left: auto;
+    cursor: pointer;
+    user-select: none;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    display: block;
+  }
+  #menu_open_button {
+    background-image: url('tab4d_menu.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+  }
+  .view_icon {
+    width: 45px;
+    height: 45px;
+    margin: 5px;
+    cursor: pointer;
+    user-select: none;
+    border: none;
+    outline: none;
+    background-color: transparent;
+  }
+  #view_default {
+    background-image: url('tab4d_default.png');
+    background-size: cover;
+  }
+  #view_front {
+    background-image: url('tab4d_front.png');
+    background-size: cover;
+  }
+  #view_right {
+    background-image: url('tab4d_right.png');
+    background-size: cover;
+  }
+  #view_left {
+    background-image: url('tab4d_left.png');
+    background-size: cover;
+  }
+  #view_top {
+    background-image: url('tab4d_top.png');
+    background-size: cover;
+  }
+  .menu_close_icon {
+    width: 35px;
+    height: 35px;
+    margin-left: 5px;
+    background-color: transparent;
+    cursor: pointer;
+    user-select: none;
+    border: none;
+    outline: none;
+    display: none;
+  }
+  #menu_close_button {
+    background-image: url('tab4d_close.png');
+    background-size: cover;
+  }
+  #node_onoff {
+    background-image: url('tab4d_node.png');
+    background-size: cover;
+  }
+  #assist_onoff {
+    background-image: url('tab4d_assist.png');
+    background-size: cover;
+  }
+  #curpos_onoff {
+    background-image: url('tab4d_position.png');
+    background-size: cover;
+  }
+  #change_io {
+    background-image: url('tab4d_change_io.png');
+    background-size: cover;
+    border: solid 2px rgb(255, 255, 255);
+    border-radius: 5px;
+  }
+  #change_reg {
+    background-image: url('tab4d_change_reg.png');
+    background-size: 38px;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: solid 2px rgb(255, 255, 255);
+    border-radius: 5px;
+  }
+  #change_posreg {
+    background-image: url('tab4d_change_posreg.png');
+    background-size: cover;
+    border: solid 2px rgb(255, 255, 255);
+    border-radius: 5px;
+  }
+  #change_safeio {
+    background-image: url('tab4d_change_safetyio.png');
+    background-size: 38px;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: solid 2px rgb(255, 255, 255);
+    border-radius: 5px;
+  }
+  .pos_area {
+    position: relative;
+    background-color: transparent;
+    width: 240px;
+    font-family: "Meiryo UI", sans-serif;
+    font-size: 18px;
+    margin-top: 15px;
+    margin-left: auto;
+    color: #ffffff;
+    background-color: rgba(60,60,60,0.89);
+    display: none;
+  }
+  .pos_txt {
+    margin: 0px 0px 2px 10px;
+  }
+  .pos_grp {
+    margin: 10px 0px 0px 5px;
+  }
+  .pos_title {
+    margin: 0px 0px 5px 5px;
+  }
+  .pos_bottom {
+    height: 20px;
+  }
+  .pos_btn_area{
+    right: 0px;
+    height: 40px;
+    display: flex;
+    flex-wrap: nowrap;
+    border-bottom: 2px solid white;
+  }
+  .pos_txt_area {
+    min-height: 250px;
+    display: block;
+  }
+  .pos_tab {
+    width: 80px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .pos_tab_txt {
+    font-size: 16px;
+    line-height: 38px;
+    user-select: none;
+  }
+  .pos_tab_selected {
+    background-color: #0e6eb8;
+  }

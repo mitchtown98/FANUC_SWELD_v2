@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="<!-- #echo var={_CHARSET} -->">
+  <link rel="stylesheet"
+        href="/frh/ihmi/ihmicomponentstyl.css" />
+  <link rel="stylesheet"
+        href="/frh/ihmi/ihmicomponentposition.css@" />
+  <script src="SWeld_detail.js"></script>
+  <title>Stitch Weld Setup</title>
+
+  <style type="text/css">
+    .titlename {
+      position: fixed;
+      top: 10px;
+    }
+
+    .labelTitle {
+      font-size: 22px;
+      text-decoration: underline;
+      margin: 0px 0px 0px 20px;
+      background-color: #e1e7ec;
+      z-index: 10;
+    }
+
+    #sampleImageA {
+      float: right;
+    }
+
+    #sampleImageB {
+      float: right;
+      margin-right: 10%;
+    }
+
+    .formLine {
+      margin: 40px 0 0 20px;
+      min-width: 600px;
+      font-size: 24px;
+      padding-left: 12px;
+      padding-right: 10px;
+      margin-left: 30px;
+    }
+
+    .formLine2 {
+      margin: 40px 0 0 20px;
+      width: 450px;
+      font-size: 20px;
+      padding-left: 12px;
+      padding-right: 10px;
+      margin-left: 30px;
+    }
+
+    .content {
+      z-index: 40;
+      position: absolute;
+      height: 100%;
+      width: calc(100% - 9px);
+      top: 0;
+      left: 0;
+      display: inline-block;
+      text-align: left;
+      flex-wrap: wrap;
+      overflow-x: hidden;
+      overflow-y: scroll;
+      user-select: none;
+    }
+
+    .gripButton {
+      font-size: 25px;
+      margin-top: 0px;
+      letter-spacing: 5px;
+    }
+
+    .sp {
+      padding-left: 5px;
+      font-weight: bold;
+    }
+
+    .h-line {
+      width: 25%;
+      color: black;
+      size: 2px;
+    }
+
+    .var-container {
+      flex-wrap: wrap;
+      flex-direction: row;
+      display: inline-block;
+      border-style: solid;
+      border-radius: 4px;
+      border-color: lime;
+      border-width: 2px;
+      margin: 4px;
+      background-image: linear-gradient(to left bottom, #9fa2a5, #77787a, #505152, #2c2d2d, #080808);
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 1px 0 rgba(0, 0, 0, 0.14), 0 2px 1px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .container-title {
+      font-family: Verdana;
+      font-size: 24px;
+      text-decoration: underline;
+      color: whitesmoke;
+      margin-left: .5em;
+
+    }
+
+    .container-text {
+      font-family: Verdana;
+      font-size: 20px;
+      color: whitesmoke;
+    }
+
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: 130px 300px;
+      grid-template-rows: auto;
+      column-gap: 1em;
+      box-sizing: border-box;
+      margin-right: 1em;
+      align-content: center;
+      width: fit-content;
+      height: 400px;
+      justify-items: left;
+      font-family: Verdana;
+      font-size: 22px;
+      color: whitesmoke;
+
+    }
+
+    .item {
+      box-sizing: border-box;
+      padding-top: .5em;
+      padding-left: 1em;
+      width: 200px;
+      height: 50px;
+    }
+
+    .item-text {
+      font-family: Verdana;
+      font-size: 22px;
+      color: whitesmoke;
+      vertical-align: top;
+
+    }
+  </style>
+</head>
+
+<body>
+  <div class="content">
+    <div id="labelTitle"
+         class="labelTitle titlename">
+      <label id="label1"></label>
+    </div>
+    <div id="sampleImageB"
+         style="margin-left: 10px;">
+      <img src="crx-sweld-instrc.png"
+           width="250px">
+    </div>
+    <div class="formLine">
+      <label for="setStart">Start PR</label>
+      <ihmi type="textboxInteger"
+            id="setStart"
+            designpattern="touch"
+            buttons="step2"
+            step1="1"
+            step2="10"
+            inputType="number"
+            width="100px"
+            errPopPos="1"></ihmi>
+      <span class="sp">(A)</span>
+    </div>
+    <div class="formLine">
+      <label for="setEnd">End PR</label>
+      <ihmi type="textboxInteger"
+            id="setEnd"
+            designpattern="mouse"
+            buttons="step2"
+            step1="1"
+            step2="10"
+            inputType="number"
+            width="100px"
+            errPopPos="1"></ihmi>
+      <span class="sp">(B)</span>
+    </div>
+
+    <div class="formLine">
+      <label for="setLen">Weld Length</label>
+      <ihmi type="textboxReal"
+            id="setLen"
+            designpattern="mouse"
+            decimals="1"
+            buttons="step2"
+            step1="0.1"
+            step2="1"
+            inputType="number"
+            width="100px"
+            errPopPos="1"></ihmi>
+      <span class="sp">(C)</span>
+    </div>
+
+
+    <div class="formLine">
+      <label for="setPitch">Weld Pitch</label>
+      <ihmi type="textboxInteger"
+            id="setPitch"
+            designpattern="mouse"
+            buttons="step2"
+            step1="1"
+            step2="10"
+            inputType="tel"
+            width="100px"
+            errPopPos="1"></ihmi>
+      <span class="sp">(D)</span>
+    </div>
+
+    <div class="formLine">
+      <label for="setSched">Weld Sched</label>
+      <ihmi type="textboxInteger"
+            id="setSched"
+            designpattern="touch"
+            buttons="step2"
+            step1="1"
+            step2="10"
+            inputType="number"
+            width="100px"
+            errPopPos="1"></ihmi>
+
+    </div>
+
+    <div class="formLine">
+      <label for="setSpeed">Weld Speed</label>
+      <ihmi type="textboxInteger"
+            id="setSpeed"
+            designpattern="touch"
+            buttons="step2"
+            step1="1"
+            step2="10"
+            inputType="number"
+            width="100px"
+            errPopPos="1"></ihmi>
+    </div>
+
+
+
+    <div class="formLine">
+      <label for="setName">Tp Name</label>
+      <ihmi type="textboxString"
+            id="setName"
+            mode="dataname"
+            designpattern="mouse"
+            width="200px"
+            errPopPos="1"></ihmi>
+    </div>
+
+  </div>
+</body>
+
+</html>

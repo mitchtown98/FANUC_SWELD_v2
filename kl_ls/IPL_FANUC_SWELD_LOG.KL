@@ -1,0 +1,59 @@
+------------------------------------------------------------------  
+--  KAREL PROGRAM:  IPL_FANUC_SWELD_LOG.KL
+--        
+--  SYNOPSIS:       This program will log the robot position. Logging
+--                  starts and stops with a variable.  
+--
+--  AUTHOR:         JASON MITCHELL; jason.mitchell@fanucamerica.com 
+--
+--  DATE:           06/22/2022
+--                 
+--  COMPANY:        FANUC AMERICA
+
+------------------------------------------------------------------  
+PROGRAM IPL_FANUC_SWELD_LOG
+------------------------------------------------------------------  
+%ALPHABETIZE
+%COMMENT = 'Position Logger'
+%NOPAUSE = ERROR + COMMAND + TPENABLE
+--%NOABORT = ERROR + COMMAND + TPENABLE
+%NOLOCKGROUP 
+%NOBUSYLAMP
+------------------------------------------------------------------     
+--%INCLUDE KLEVKEYS  --Karel key code definition file
+%INCLUDE KLEVCCDF  --Karel character constant definition file
+--%INCLUDE SYSDEF
+------------------------------------------------------------------
+CONST
+  TD_LOG = 'TD:SWELDPOS.CSV'
+  UD_LOG = 'UD1:SWELDPOS.CSV'
+  UD_DEV = 'UD1:'
+
+VAR
+  klLogFile:  FILE
+  outputLog:  FILE
+  logStart:   INTEGER 
+  logEnd:     INTEGER
+  fstatus:    INTEGER
+-----------------------------------------MAIN-----------------------------------------
+BEGIN
+--INIT--
+  $SCR_GRP[1].$M_POS_ENB = TRUE    
+        
+  OPEN FILE klLogFile('AP', TD_LOG)
+   WRITE klLogFile(
+     $FAST_CLOCK::2,',',
+     $SCR_GRP[1].$MCH_POS_X::9::3,',',
+     $SCR_GRP[1].$MCH_POS_Y::9::3,',',
+     $SCR_GRP[1].$MCH_POS_Z::9::3,',',
+     $SCR_GRP[1].$MCH_POS_W::9::3,',',
+     $SCR_GRP[1].$MCH_POS_P::9::3,',',
+     $SCR_GRP[1].$MCH_POS_R::9::3)
+   WRITE klLogFile(CR)
+   CLOSE FILE klLogFile  
+
+           
+   COPY_FILE(TD_LOG, 'UD1:', TRUE, FALSE, fstatus)  
+   DELETE_FILE(TD_LOG, FALSE, fstatus)
+  
+END IPL_FANUC_SWELD_LOG

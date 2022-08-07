@@ -1,0 +1,12 @@
+DEL_HEAD_TPE(open_id:INTEGER, index_1:INTEGER, index_2:INTEGER, status:INTEGER)
+FND_HEAD_TPE(open_id:INTEGER, appl_name:STRING, index_1:INTEGER, index_2:INTEGER, status:INTEGER)
+GET_HEAD_TPE(open_id:INTEGER, index_1:INTEGER, index_2:INTEGER, buf_siz:INTEGER, appl_data:BYTE, status:INTEGER)
+RD2_HEAD_TPE(ept_index:INTEGER, appl_name:STRING, buf_siz:INTEGER, appl_data:BYTE, status:INTEGER)
+RD_HEAD_TPE(prog_name:STRING, appl_name:STRING, buf_siz:INTEGER, appl_data:BYTE, status:INTEGER)
+SET_HEAD_TPE(open_id:INTEGER, index_1:INTEGER, index_2:INTEGER, opt_sw:INTEGER, buf_siz:INTEGER, appl_data:BYTE, status:INTEGER)
+
+GET_INST_TPE(open_id:INTEGER, lin_num:INTEGER, lin_data:BYTE, status:INTEGER)
+GET_RAW_INST(open_id:INTEGER, lin_num:INTEGER, lin_data:BYTE, status:INTEGER)
+REP_INST_TPE(open_id:INTEGER, lin_num:INTEGER, opt_sw:INTEGER, lin_data:BYTE, lin_len:INTEGER, status:INTEGER)
+SET_INST_TPE(open_id:INTEGER, lin_num:INTEGER, opt_sw:INTEGER, lin_data:BYTE, lin_len:INTEGER, status:INTEGER)
+SET_TEXT_TPE(prog_name:STRING, lin_num:INTEGER, opt_sw:INTEGER, lin_data:STRING, status:INTEGER)

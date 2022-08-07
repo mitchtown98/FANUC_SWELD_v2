@@ -1,0 +1,47 @@
+CLOSE_TPE(open_id:INTEGER, status:INTEGER)
+COPY_TPE(from_prog:STRING, to_prog:STRING, overwrite_sw:BOOLEAN, status:INTEGER)
+CREATE_TPE(prog_name:STRING, prog_type:INTEGER, status:INTEGER)
+OPEN_TPE(proc_name:STRING, open_mode:INTEGER, reject_mode:INTEGER, open_id:INTEGER, status:INTEGER)
+SELECT_TPE(prog_name:STRING, status:INTEGER)
+
+
+
+
+GET_TPE_CMT(open_id:INTEGER, pos_no:INTEGER, comment:STRING, status:INTEGER)
+SET_TPE_CMT(open_id:INTEGER, pos_no:INTEGER, comment:STRING, status:INTEGER)
+
+
+
+
+DEL_HEAD_TPE(open_id:INTEGER, index_1:INTEGER, index_2:INTEGER, status:INTEGER)
+FND_HEAD_TPE(open_id:INTEGER, appl_name:STRING, index_1:INTEGER, index_2:INTEGER, status:INTEGER)
+GET_HEAD_TPE(open_id:INTEGER, index_1:INTEGER, index_2:INTEGER, buf_siz:INTEGER, appl_data:BYTE, status:INTEGER)
+RD2_HEAD_TPE(ept_index:INTEGER, appl_name:STRING, buf_siz:INTEGER, appl_data:BYTE, status:INTEGER)
+RD_HEAD_TPE(prog_name:STRING, appl_name:STRING, buf_siz:INTEGER, appl_data:BYTE, status:INTEGER)
+SET_HEAD_TPE(open_id:INTEGER, index_1:INTEGER, index_2:INTEGER, opt_sw:INTEGER, buf_siz:INTEGER, appl_data:BYTE, status:INTEGER)
+
+
+
+
+END_EDIT_TPE()
+END_EXEC_TPE()
+
+
+
+
+DEL_INST_TPE(open_id:INTEGER, lin_num:INTEGER, status:INTEGER)
+GET_INST_TPE(open_id:INTEGER, lin_num:INTEGER, lin_data:BYTE, status:INTEGER)
+GET_RAW_INST(open_id:INTEGER, lin_num:INTEGER, lin_data:BYTE, status:INTEGER)
+REP_INST_TPE(open_id:INTEGER, lin_num:INTEGER, opt_sw:INTEGER, lin_data:BYTE, lin_len:INTEGER, status:INTEGER)
+SET_INST_TPE(open_id:INTEGER, lin_num:INTEGER, opt_sw:INTEGER, lin_data:BYTE, lin_len:INTEGER, status:INTEGER)
+SET_TEXT_TPE(prog_name:STRING, lin_num:INTEGER, opt_sw:INTEGER, lin_data:STRING, status:INTEGER)
+
+
+
+
+GET_JPOS_TPE(open_id:INTEGER, position_no:INTEGER, status:INTEGER, group_no:INTEGER (OPT)):JOINTPOS
+GET_POS_TPE(open_id:INTEGER, position_no:INTEGER, status:INTEGER, group_no:INTEGER (OPT)):XYZWPR
+SET_EPOS_TPE(open_id:INTEGER, position_no:INTEGER, posn:XYZWPR, status:INTEGER, group_no:INTEGER (OPT))
+SET_JPOS_TPE(open_id:INTEGER, position_no:INTEGER, posn:JOINTPOS, status:INTEGER, group_no:INTEGER (OPT))
+SET_POS_TPE(open_id:INTEGER, position_no:INTEGER, posn:XYZWPR, status:INTEGER, group_no:INTEGER (OPT))
+SET_TRNS_TPE(open_id:INTEGER, position_no:INTEGER, posn:POSITION, status:INTEGER, group_no:INTEGER (OPT))

@@ -1,0 +1,76 @@
+-- ------------------------------------------------------------------
+-- ROUTINE u_AUTOBEAD_VECTOR(ep : XYZWPR; v : VECTOR; seg_num : INTEGER; seg_len, mag_v: REAL;  i, log_enable : INTEGER)  --Comment
+-- ------------------------------------------------------------------
+-- VAR
+--   k       : REAL
+--   dist_c  : REAL
+--   adj_len : REAL
+--   ve      : VECTOR 
+--   vo      : VECTOR
+--   adjV    : VECTOR
+-- BEGIN 
+--   ve = u_POS_TO_VECTOR(ep)
+--     --temp_sq = SQRT((ve.X * ve.X) + (ve.Y * ve.Y))  
+--   temp_sq = SQRT((v.X * v.X) + (v.Y * v.Y))  
+  
+--   adj_len = (mag_v - (sglen * seg_num))
+
+--   adj_len = (adj_len/(sgpitch) - 1)
+
+--   --tempv = (v/adj_len)
+--   tempv = (v/mag_v)
+--   adjV = (tempv * adj_len)
+  
+--    WRITE log('Unit Vector             = ', tempv::9::4, CR)
+
+--   --*******************--CHANGE 
+  
+--   tempv = (sglen * tempv)
+--   vo = (sgoff * tempv)
+
+--   voff.X = (0.0 - vo.X)
+--   voff.Y = (0.0 - vo.Y)  
+
+--   WRITE log('Unit Vector * Magnitude = ', tempv::9::4, CR)
+--   WRITE log(CR)
+
+--   WRITE log('Bead Len   = ', sglen::9::3, CR) 
+--   WRITE log('Bead Pitch = ', sgpitch, CR)
+--   WRITE log(CR)
+
+--   OPEN FILE cFile('RW', CSV_LOG)
+--   WRITE cFile(start_pt.X::9::3, ',', start_pt.Y::9::3,CR)  
+
+--   FOR i = 1 TO seg_num DO
+--     seg_start[i] = start_pt
+
+--     --k = (i/seg_num)
+--     k = (i/seg_num+1)
+
+--     seg_start[i].X = (start_pt.X + (k * v.X))
+--     seg_start[i].Y = (start_pt.Y + (k * v.Y))
+
+--     seg_end[i] = seg_start[i]
+--     seg_end[i].X = seg_end[i].X + (tempv.X)
+--     seg_end[i].Y = seg_end[i].Y + (tempv.Y)
+    
+        
+--     IF log_enable = 1 THEN
+--       WRITE log('Start Seg', seg_start[i],CR)
+--       WRITE log(CR)
+--       WRITE log('End Seg', seg_end[i],CR)
+--       WRITE log(CR)
+--     ENDIF
+
+--     WRITE cFile(seg_start[i].X::9::3,',',seg_start[i].Y::9::3, CR)
+--     WRITE cFile(seg_end[i].X::9::3,',',seg_end[i].Y::9::3, CR)
+   
+--   ENDFOR
+
+--   sgstart = seg_start[1]
+--   sgend = seg_end[1]
+
+--   WRITE cFile(end_pt.X::9::3, ',', end_pt.Y::9::3,CR)
+--   CLOSE FILE cFile
+  
+-- END u_AUTOBEAD_VECTOR

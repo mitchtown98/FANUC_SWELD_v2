@@ -1,0 +1,111 @@
+PROGRAM create_ls
+
+%COMMENT = 'Create LS'
+%NOPAUSESHFT
+%NOPAUSE = ERROR + TPENABLE + COMMAND
+%NOABORT = ERROR + COMMAND
+%NOLOCKGROUP
+%NOBUSYLAMP
+
+VAR
+	file1 : FILE
+	attr_out: INTEGER
+	ex:BOOLEAN
+	STATUS:INTEGER	
+
+BEGIN	
+	
+	ex = FALSE	
+	
+	OPEN FILE file1 ('RW', 'MD:TEST.LS')
+		WRITE file1('/PROG  TEST',CR)
+		WRITE file1('/ATTR',CR)	
+		WRITE file1('OWNER		= MNEDITOR;',CR)
+		WRITE file1('COMMENT		= "";',CR)
+		WRITE file1('PROG_SIZE	= 772;',CR)
+		WRITE file1('CREATE		= DATE 17-05-26  TIME 12:17:02;',CR)
+		WRITE file1('MODIFIED	= DATE 17-05-26  TIME 12:17:44;',CR)
+		WRITE file1('FILE_NAME	= ;',CR)
+		WRITE file1('VERSION		= 0;',CR)
+		WRITE file1('LINE_COUNT	= 5;',CR)
+		WRITE file1('MEMORY_SIZE	= 1124;',CR)
+		WRITE file1('PROTECT		= READ_WRITE;',CR)
+		WRITE file1('TCD:  STACK_SIZE	= 0,',CR)
+		WRITE file1('      TASK_PRIORITY	= 50,',CR)
+		WRITE file1('      TIME_SLICE	= 0,',CR)
+		WRITE file1('      BUSY_LAMP_OFF	= 0,',CR)
+		WRITE file1('      ABORT_REQUEST	= 0,',CR)
+		WRITE file1('      PAUSE_REQUEST	= 0;',CR)
+		WRITE file1('DEFAULT_GROUP	= 1,*,*,*,*;',CR)
+		WRITE file1('CONTROL_CODE	= 00000000 00000000;',CR)
+		WRITE file1('/APPL',CR)		
+		WRITE file1('/MN',CR)
+		WRITE file1('   1:  OVERRIDE=10% ;', CR)
+		WRITE file1('   2:J P[1] 10% FINE    ;',CR)
+		WRITE file1('   3:J P[2] 40% FINE ;',CR)			
+		WRITE file1('   4:L P[3]  100mm/sec CNT100    ;',CR)
+		WRITE file1('   5:L P[4]  100mm/sec FINE ;',CR)			
+		WRITE file1('   6:L P[5] 100mm/sec FINE    ;',CR)
+		WRITE file1('/POS',CR)
+		WRITE file1('P[1]{',CR)
+		WRITE file1('   GP1:',CR)
+		WRITE file1('	UF : 0, UT : 1,		CONFIG : ''N U T, 0, 0, 0'',',CR)
+		WRITE file1('	X =  1206.939  mm,	Y =      .079  mm,	Z =   936.701  mm,',CR)
+		WRITE file1('	W =  -179.957 deg,	P =    -8.668 deg,	R =      .016 deg',CR)
+		WRITE file1('};',CR)
+		WRITE file1('P[2]{',CR)
+		WRITE file1('   GP1:',CR)
+		WRITE file1('	UF : 0, UT : 1,		CONFIG : ''N U T, 0, 0, 0'',',CR)
+		WRITE file1('	X =  1206.939  mm,	Y =      .079  mm,	Z =   849.147  mm,',CR)
+		WRITE file1('	W =  -179.957 deg,	P =    -8.668 deg,	R =      .016 deg',CR)
+		WRITE file1('};',CR)
+		WRITE file1('P[3]{',CR)
+		WRITE file1('   GP1:',CR)
+		WRITE file1('	UF : 0, UT : 1,		CONFIG : ''N U T, 0, 0, 0'',',CR)
+		WRITE file1('	X =  1269.144  mm,	Y =      .079  mm,	Z =   849.147  mm,',CR)
+		WRITE file1('	W =  -179.957 deg,	P =    -8.668 deg,	R =      .016 deg',CR)
+		WRITE file1('};',CR)
+		WRITE file1('P[4]{',CR)
+		WRITE file1('   GP1:',CR)
+		WRITE file1('	UF : 0, UT : 1,		CONFIG : ''N U T, 0, 0, 0'',',CR)
+		WRITE file1('	X =  1324.438  mm,	Y =      .079  mm,	Z =   849.147  mm,',CR)
+		WRITE file1('	W =  -179.957 deg,	P =    -8.668 deg,	R =      .016 deg',CR)
+		WRITE file1('};',CR)
+		WRITE file1('P[5]{',CR)
+		WRITE file1('   GP1:',CR)
+		WRITE file1('	UF : 0, UT : 1,		CONFIG : ''N U T, 0, 0, 0'',',CR)
+		WRITE file1('	X =  1324.438  mm,	Y =      .079  mm,	Z =   880.251  mm,',CR)
+		WRITE file1('	W =  -179.957 deg,	P =    -8.668 deg,	R =      .016 deg',CR)
+		WRITE file1('};',CR)
+		WRITE file1('/END',CR)	
+	CLOSE FILE file1
+	
+	DELAY 500
+	
+	IF (OPOUT[7] = ON) THEN
+		WRITE('Run from iPendant', CR)
+		RUN_TASK('TEST',0,FALSE,TRUE,1,STATUS)		
+	else
+		WRITE('Run AUTO', CR)
+		RUN_TASK('TEST',0,FALSE,FALSE,1,STATUS)		
+	ENDIF	
+	
+	
+	REPEAT			
+		GET_TSK_INFO('TEST', 0, TSK_STATUS, attr_out , '', STATUS)
+	
+		IF (attr_out = PG_ABORTED) THEN
+			go to exit
+		ENDIF	
+	
+		DELAY 300
+	
+	UNTIL ex = TRUE
+	
+	exit::
+	
+	DELAY 500
+	
+	DELETE_FILE('MD:TEST.LS', FALSE, STATUS)	
+	
+END create_ls

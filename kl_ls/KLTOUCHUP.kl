@@ -1,0 +1,105 @@
+------------------------------------------------------------------
+--   KL PROGRAM:   KLTOUCHUP
+
+--   SYNOPSIS:     Synopsis
+--
+--   PARAMETERS:   Parameters
+--
+--
+--
+--   AUTHOR:       Author
+
+--   DATE:         2022.07.04
+
+--   COMPANY:      Company
+
+------------------------------------------------------------------
+PROGRAM KLTOUCHUP
+------------------------------------------------------------------
+%COMMENT = 'Comment'
+%NOLOCKGROUP  
+%ALPHABETIZE
+--%NOABORT = ERROR + COMMAND + TPENABLE
+--%NOLOCKGROUP                         --Specifies no motion is locked
+--%UNINITVARS                          --Specifies that all vars are uninit by default
+--%NOPAUSE = ERROR + COMMAND + TPENABLE  --Specifies Mask for Pausing
+                                           --ERROR: ignore pause severity
+                                           --COMMAND: ignore pause command
+                                           --TPENABLE: ignore paused req w/TP enabled
+--%DELAY                               --Time to delay program
+%INCLUDE KLEVKEYS                      --Key code defininition file
+%INCLUDE KLEVKMSK                      --Mask values used for form manager term_masks
+%INCLUDE KLEVCCDF                      --Character code constants 
+%INCLUDE KLIOUOP                       --Constants used for UOP I/O
+%INCLUDE KLIOTYPS                      --Constants defining I/O types
+------------------------------------------------------------------
+CONST                                  --Most constants commonly used. Comment out if not needed
+  SUCCESS      = 0                     --Used for Arg status
+  ER_WARN      = 0                     --Error Warning
+  ER_PAUSE     = 1                     --Error Pause
+  ER_ABORT     = 2                     --Error ABort
+  PRM_INT      = 1                     --Flag for INT Arg
+  PRM_REAL     = 2                     --Flag for REAL Arg
+  PRM_STRING   = 3                     --Flag for STRING Arg
+  MAX_STR_LEN  = 254                   --Max CHAR for STRINGS
+  I_MAX        = 9999                  --Max Integer Value
+  I_MIN        = 1                     --Min Integer Value
+  R_MAX        = 9999.99               --Max Real Value
+  R_MIN        = 1                     --Min Real Value
+  NULL_STRING  = ''                    --Empty String
+  SYS_VAR      = '*SYSTEM*'            --Constant for using System variables
+  USER_LOG     = 'UD1:USERLOG.TXT'     --Pipe Logging
+  PIPE_LOG     = 'PIP:PIPELOG.DAT'     --Text File Logging
+
+VAR
+  tpos   :XYZWPREXT
+  axis_lim_mask: INTEGER
+  ovr_trv_mask:  INTEGER
+  grp_msk:      INTEGER
+  pr_num:       INTEGER
+  pint:         INTEGER
+  preal:        INTEGER
+  return_code: INTEGER
+  pstring:      STRING[36]
+  status:       INTEGER
+  ok_click:     BOOLEAN
+  cancel_click: BOOLEAN
+  close_window:        BOOLEAN
+
+------------------------------------------------------------------
+--                              MAIN                              
+------------------------------------------------------------------
+BEGIN
+status = 0
+pint = 0
+preal = 0
+pstring =''
+ok_click = FALSE
+cancel_click = FALSE
+close_window = FALSE
+
+WRITE('KCL Called ME', CR)
+
+--REPEAT
+
+--   IF(ok_click = TRUE)THEN
+--     tpos = CURPOS(axis_lim_mask, ovr_trv_mask, 1)
+--     SET_POS_REG(pr_num, tpos, status, 1)
+--     WRITE('PR, touchup', CR)
+--     ok_click = FALSE
+--     close_window = TRUE
+--   ENDIF
+
+--   IF(cancel_click = TRUE)THEN
+--     WRITE('Cancel, no touchup', CR)
+--     cancel_click = FALSE
+--     close_window = TRUE
+--   ENDIF
+
+--   DELAY 100
+-- UNTIL(close_window = TRUE)
+
+-- Return a NO RESPONSE Required code
+
+  return_code = 204
+END KLTOUCHUP

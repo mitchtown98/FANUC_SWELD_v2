@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="iso-8859-1">
+  <link rel="stylesheet"
+        href="/frh/ihmi/ihmicomponentstyl.css" />
+  <link rel="stylesheet"
+        href="/frh/ihmi/ihmicomponentposition.css@" />
+  <link rel="stylesheet"
+        href="CPLUG_mainstyle.css" />
+  <style>
+    li {
+      font-size: 18px;
+    }
+
+    li.note {
+      color: red;
+    }
+
+    .help-container-short {
+      width: fit-content;
+      background-color: rgba(105, 105, 105);
+      border-style: solid;
+      border-radius: 4px;
+      border-color: rgb(14, 110, 184);
+      border-width: 2px;
+      margin: .5em;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 1px 0 rgba(0, 0, 0, 0.14), 0 2px 1px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .help-close {
+      position: relative;
+      left: 10em;
+      padding-left: 1em;
+    }
+
+    .container-help-title {
+      font-family: var(--detail-font);
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--detail-text-black);
+      margin-top: .5em;
+      margin-left: .5em;
+      margin-right: 1em;
+      z-index: 10;
+    }
+
+    .item-long {
+      margin-bottom: 1em;
+    }
+
+    .div-illustration {
+      text-align: center;
+      font-size: 16px;
+      font-family: Verdana;
+      font-style: italic;
+
+    }
+  </style>
+  <!-- <script src="/frh/jquery/js/jquery.js?version=V9.40179"></script> -->
+  <!--For Testing Locally-->
+  <script type="text/javascript"
+          src="/test/jquery-3.6.0.min.js"></script>
+
+  <title>Stitch Weld Help</title>
+</head>
+
+<body>
+  <div class="container-help-title">How the Instruction Works...
+    <!-- <span class="help-close">
+      <button type="button"
+              class="close-help-btn"
+              id="closeBtn">&#10006;
+      </button>
+    </span> -->
+
+    <ol>
+      <li>When the instruction is executed, a Karel Routine is called to create weld segments.</li>
+      <li>Upon successful completion, a TP Program is generated with the provided name.</li>
+      <ul>
+        <li class="note">Note: If a TP Program with the same name exists, it will be OVERWRITTEN. </li>
+      </ul>
+    </ol>
+    <div class="div-illustration">
+      <div class="illustration-box">
+        <img src="help_tp.png"
+             alt="TP Image">
+
+      </div>Example of generated TPP.
+    </div>
+
+  </div>
+</body>
+
+</html>

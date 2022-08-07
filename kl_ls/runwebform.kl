@@ -1,0 +1,170 @@
+--
+-- KAREL program to run web pages using INIT_FORM/ACT_FORM
+--
+PROGRAM runwebform
+%NOLOCKGROUP
+%ENVIRONMENT UIF
+
+%INCLUDE webf       -- allows access to form element numbers
+%INCLUDE klevccdf
+%INCLUDE klevkeys
+%INCLUDE klevkmsk
+
+--%INCLUDE webvars    -- allows multiple KAREL programs to use same vars
+
+VAR
+  %INCLUDE webvars
+
+  device_stat: INTEGER
+  value_array:  ARRAY[1] OF STRING[1]
+  vptr_array:   ARRAY[1] OF INTEGER
+  inact_array:  ARRAY[1] OF BOOLEAN
+  change_array: ARRAY[20] OF BOOLEAN
+  def_item: INTEGER
+  def_item_sav: INTEGER
+  term_char: INTEGER
+  status: INTEGER
+  idx: INTEGER
+  done: BOOLEAN
+  form_data: WORK_T
+  key: INTEGER
+
+ROUTINE notify_user
+  BEGIN
+  def_item_sav = def_item
+  WRITE TPERROR (CHR(cc_clear_win))
+  WRITE TPERROR ('Focus on ', def_item::1)
+END notify_user
+
+BEGIN
+  --      /MC/WEBFORM.STM:  contains edit data items
+  --
+  
+  -- Initialize variables
+  int_var1 = 12345
+  str_var1 = 'This is a test'
+  choices[1] = ''       -- not used
+  choices[2] = 'Red'    -- corresponds to color_sel2 = 1
+  choices[3] = 'Blue'   -- corresponds to color_sel2 = 2
+  choices[4] = 'Green'  -- corresponds to color_sel2 = 3
+  choices[5] = 'Yellow' -- corresponds to color_sel2 = 4
+  FOR idx = 6 TO 100 DO
+    CNV_INT_STR(idx - 1, 0, 0, choices[idx])
+  ENDFOR
+
+  INIT_FORM(
+    '/MC/EXECKEX2.STM', -- dict_name contains web page
+    0,                  -- ele_number not used
+    value_array,        -- not used
+    vptr_array,         -- not used
+    inact_array,        -- not used
+    change_array,       -- change_array
+    form_data,        
+    status)
+  IF status <> 0 THEN
+    WRITE TPERROR (CHR(cc_clear_win))
+    WRITE TPERROR ('INIT_FORM status ', status)
+  ELSE 
+    def_item = 1  -- start with menu item 1
+    def_item_sav = 1
+    ACT_FORM(ky_disp_updt, def_item, form_data, term_char, status)
+    IF status <> 0 THEN
+      WRITE TPERROR (CHR(cc_clear_win))
+      WRITE TPERROR('ACT_FORM status = ', status)
+    ELSE 
+      -- Loop until a termination key is selected.
+      done = FALSE
+      key = ky_reissue -- read new key
+      WHILE NOT done DO
+        -- Read new key, act on it, and return it
+        ACT_FORM(key, def_item, form_data, term_char, status)
+
+        -- Process termination keys.
+        WRITE TPERROR (CHR(cc_clear_win))
+        SELECT (term_char) OF
+          CASE (ky_select):
+            WRITE TPERROR ('Function key ', def_item::1, ' was selected.')
+            if (def_item = 5) THEN
+              done = TRUE
+            ELSE
+              key = ky_reissue -- read new key
+            ENDIF
+          CASE (ky_new_menu):
+            done = TRUE
+          CASE (ky_undef):
+            key = ky_reissue -- read new key
+          CASE (tk_ui_loaded):
+            -- Web page was loaded
+            -- Display data to chart
+           clr_io_stat(pip_file)
+           open file pip_file('AP', 'PIP:KCHART.DAT')
+           status = io_status(pip_file)
+           if uninit(dly) then 
+             dly = 1000
+           endif
+
+           if status = 0 then
+             write pip_file('chartclear ', cr)
+             write pip_file('caption="KAREL driven" ', cr)
+             delay(dly)
+             write pip_file('DataShowValues=0 ', cr)
+             write pip_file('ch1_state=1 ', cr)
+             write pip_file('ch1 data="1,3,4,7,8,6,9,9,8,7,8,8,9,9" ', cr)
+             delay(dly)
+             write pip_file('ch2_state=1 ', cr)
+             write pip_file('ch2_data="2,7,9,13,6,12,14,11,12,11,12,14,13,13" ', cr)
+             delay(dly)
+
+             write pip_file('ch3_state=1 ', cr)
+             write pip_file('ch3_data="3,9,12,17,19,14,19,16,9,3,6,6,4,5" ', cr)
+             delay(dly)
+
+             write pip_file('DataShowValues=1 ', cr)
+            delay(dly)
+
+            write pip_file('samplemarker1=1,5 ', cr)
+            delay(dly)
+            write pip_file('samplemarker1=1,9 ', cr)
+            delay(dly)
+            write pip_file('samplemarker1=0 ', cr)
+            delay(dly)
+          endif
+
+          close file pip_file
+          ELSE:
+            key = term_char  -- act on this key
+          ENDSELECT 
+
+          IF def_item <> def_item_sav THEN
+            def_item_sav = def_item
+            IF term_char <> ky_select THEN
+              WRITE TPERROR ('Focus on ', def_item::1)
+            ENDIF
+          ENDIF
+
+      ENDWHILE  
+
+      IF term_char <> ky_new_menu THEN
+        -- Cancel the dynamic display
+        ACT_FORM(ky_cancel, def_item, form_data, term_char, status)
+      ENDIF
+
+    ENDIF
+  ENDIF
+
+  -- Notify user which values were changed
+  WRITE(CHR(cc_clear_win))
+  FORCE_SPMENU(device_stat, SPI_TPUSER, 1)
+  done = FALSE
+  FOR idx = 1 to 20 DO
+    IF change_array[idx] = TRUE THEN
+      WRITE('Value ', idx, ' changed', CR)
+      done = TRUE
+    ENDIF
+  ENDFOR
+  IF done = FALSE THEN
+    WRITE('No values were changed', CR)
+  ENDIF
+
+
+END runwebform

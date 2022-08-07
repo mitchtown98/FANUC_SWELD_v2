@@ -1,0 +1,598 @@
+------------------------------------------------------------------
+--   KL PROGRAM:   IPL_FANUC_SWELD_SET
+
+--   SYNOPSIS:     Setup for Stitch Weld Plugin
+--
+--   PARAMETERS:   Uses Karel Variable in CMOS from IPL_FANUC_SWELD_CFG
+--
+--
+--
+--   AUTHOR:       JDM
+
+--   DATE:         2022.06.18
+
+--   COMPANY:      FANUC
+
+------------------------------------------------------------------
+PROGRAM IPL_FANUC_SWELD_SET
+------------------------------------------------------------------
+%COMMENT = 'KL Sweld'
+%STACKSIZE = 500                        --Stack size in long words
+%ALPHABETIZE
+--%NOABORT = ERROR + COMMAND + TPENABLE
+%NOLOCKGROUP                            --Specifies no motion is locked
+%UNINITVARS                             --Specifies that all vars are uninit by default
+%NOPAUSE = ERROR + COMMAND + TPENABLE   --Specifies Mask for Pausing
+                                        --ERROR: ignore pause severity
+                                        --COMMAND: ignore pause command
+                                        --TPENABLE: ignore paused req w/TP enabled
+--%DELAY                                --Time to delay program
+%INCLUDE KLEVKEYS                       --Key code defininition file
+%INCLUDE KLEVKMSK                       --Mask values used for form manager term_masks
+%INCLUDE KLEVCCDF                       --Character code constants 
+%INCLUDE KLIOUOP                        --Constants used for UOP I/O
+%INCLUDE KLIOTYPS                       --Constants defining I/O types
+%INCLUDE KLEVTPE                       
+
+------------------------------------------------------------------
+CONST                                   
+  %INCLUDE IPL_FANUC_SWELD_C
+  TP_STRINGREG = 9
+  LOG_HEADER = 'IPL_FANUC_SWELD_SET'
+  LOG_ERROR_HEADER = 'IPL_FANUC_SWELD_SET:ERROR'
+  PGID = 'FANUC_SWELD'
+  CSV_LOG = 'UD1:STITCHWELD.CSV'
+  TD_LOG = 'TD:SET_LOG.KL'
+VAR  
+  -- User Screen Variables
+  st_pr             IN CMOS FROM IPL_FANUC_SWELD_CFG : INTEGER
+  en_pr             IN CMOS FROM IPL_FANUC_SWELD_CFG : INTEGER
+  sglen             IN CMOS FROM IPL_FANUC_SWELD_CFG : REAL
+  sgoff             IN CMOS FROM IPL_FANUC_SWELD_CFG : REAL
+  sgpitch           IN CMOS FROM IPL_FANUC_SWELD_CFG : INTEGER
+  sgspd             IN CMOS FROM IPL_FANUC_SWELD_CFG : INTEGER
+  sgspdunit         IN CMOS FROM IPL_FANUC_SWELD_CFG : INTEGER
+  wprocedure        IN CMOS FROM IPL_FANUC_SWELD_CFG : INTEGER
+  wsched            IN CMOS FROM IPL_FANUC_SWELD_CFG : INTEGER
+  klstat            IN CMOS FROM IPL_FANUC_SWELD_CFG : INTEGER
+  dbg_enb           IN CMOS FROM IPL_FANUC_SWELD_CFG : BOOLEAN
+  tp_name           IN CMOS FROM IPL_FANUC_SWELD_CFG : STRING[36]
+  vers              IN CMOS FROM IPL_FANUC_SWELD_CFG : STRING[36]
+
+  -- LOCALS --  
+  sgend              : XYZWPR
+  seg_off            : XYZWPR  
+  sgstart            : XYZWPR   
+  swstart            : XYZWPR   
+  start_pt           : XYZWPR
+  end_pt             : XYZWPR 
+  seg_start          : ARRAY[SEG_POINTS] OF XYZWPR
+  seg_end            : ARRAY[SEG_POINTS] OF XYZWPR
+  parent_array       : ARRAY[MAX_SEGMENTS] OF XYZWPR
+  ve                 : VECTOR
+  vo                 : VECTOR
+  spd_real           : REAL
+  paramReal          : REAL
+  parent_recv_strobe : INTEGER
+  semacount          : INTEGER
+  entry              : INTEGER
+  j                  : INTEGER
+  l                  : INTEGER  
+  segcount           : INTEGER
+  paramInteger       : INTEGER
+  status             : INTEGER
+  debug              : INTEGER
+  open_id            : INTEGER 
+  time_out           : BOOLEAN
+  paramRealBool      : BOOLEAN
+  is_uninit          : BOOLEAN
+  paramString        : STRING[36]
+  timeToLog          : STRING[18]
+  msg                : STRING[254]
+  headerString       : STRING[254]
+  klfile             : FILE
+  cFile              : FILE
+
+------------------------------------------------------------------  
+ROUTINE CheckStatus_(status: INTEGER; severity: INTEGER)          --Check return status for errors
+------------------------------------------------------------------  
+BEGIN 
+  IF(status <> SUCCESS)THEN
+    --POST_ERR(status, '', 0, severity)
+    klstat = severity
+  ENDIF
+END CheckStatus_
+-----------------------------------------------------------------  
+ROUTINE RealToString_(r : REAL) : STRING
+------------------------------------------------------------------  
+VAR
+	--Set Max String Length
+	string_out:	STRING[254]
+BEGIN
+  string_out =''
+	--Use Built in to Convert
+	CNV_REAL_STR(r, 5, 4, string_out)
+	
+	--Return the Converted String
+	RETURN(string_out)
+
+END RealToString_
+
+------------------------------------------------------------------
+ROUTINE IntToString(i: INTEGER) : STRING
+------------------------------------------------------------------
+VAR
+	tempStr: 	STRING[254]
+BEGIN
+	CNV_INT_STR(i, 1, 0, tempStr)
+	
+	RETURN(tempStr)
+END IntToString
+
+------------------------------------------------------------------  
+ROUTINE LogTime_(timeOut: STRING)
+------------------------------------------------------------------  
+VAR
+	timeIn:		INTEGER
+BEGIN 
+	--Built In
+	GET_TIME(timeIn)
+	--Built Int
+	CNV_TIME_STR(timeIn, timeOut)
+END LogTime_
+
+------------------------------------------------------------------  
+ROUTINE LogStart_(inFile : FILE; msg : STRING; debug : INTEGER) --initialize klfileging
+------------------------------------------------------------------  
+VAR
+  status:  INTEGER
+BEGIN
+	--If Debug is not 1, then no debugging
+	IF UNINIT(debug) THEN debug = 0; ENDIF  	
+	IF debug <> 0 THEN
+		--SET_FILE_ATR(fConsole, ATR_IA, 0)
+		OPEN FILE inFile('AP',TD_LOG)
+		status = IO_STATUS(klfile)
+
+		IF(status <> 0)THEN
+			WRITE('Could not open : ', TD_LOG,CR)
+		ELSE
+			LogTime_(timeToLog)
+			WRITE inFile('===== ',msg + ' AT: ',timeToLog,' =====', CR)      
+      WRITE inFile(CR)
+      CLOSE FILE inFile
+		ENDIF				
+	ENDIF
+END LogStart_
+
+------------------------------------------------------------------  
+ROUTINE LogAppend_(inFile : FILE; header, msg : STRING; debug : INTEGER) --initialize klfileging
+------------------------------------------------------------------  
+VAR
+  status:  INTEGER
+BEGIN
+	--If Debug is not 1, then no debugging
+	IF UNINIT(debug) THEN debug = 0; ENDIF  	
+	IF(debug <> 0)THEN
+      OPEN FILE inFile('AP',TD_LOG)
+			WRITE inFile(header + ' : ' + msg, CR)
+      CLOSE FILE inFile
+	ENDIF		
+END LogAppend_
+
+------------------------------------------------------------------  
+ROUTINE LogEnd(inFile : FILE; msg : STRING) --finalize klfileging
+------------------------------------------------------------------ 
+BEGIN
+  OPEN FILE inFile('AP',TD_LOG)
+	LogTime_(timeToLog)
+  WRITE inFile(CR)
+	WRITE inFile('===== ' + msg + ' At ' + timeToLog + ' =====', CR)
+  WRITE inFile(CR)
+	CLOSE FILE inFile
+END LogEnd
+
+------------------------------------------------------------------
+ROUTINE CvnIntBool_(int : INTEGER) : BOOLEAN --convert integer to boolean
+------------------------------------------------------------------  
+BEGIN
+	--test if zero
+	IF int = 0 THEN RETURN(FALSE); ENDIF		
+	--not zero
+	RETURN(TRUE)	
+END CvnIntBool_
+
+------------------------------------------------------------------
+ROUTINE PositionToVector_(p : XYZWPR) : VECTOR
+------------------------------------------------------------------  
+VAR
+  ab : VECTOR
+BEGIN
+  ab.X = p.X
+  ab.Y = p.Y
+  ab.Z = p.Z
+RETURN (ab)
+END PositionToVector_
+
+------------------------------------------------------------------
+ROUTINE GenSweldSegments_(sp,ep : XYZWPR; seg_num : INTEGER; seg_len :REAL; status: INTEGER)  --Comment
+------------------------------------------------------------------
+VAR
+  i           : INTEGER
+  mag_v       : REAL
+  inv_mag_v   : REAL  
+  adj_len     : REAL
+  check_seg   : REAL
+  btwn_v      : VECTOR
+  s_v         : VECTOR
+  e_v         : VECTOR
+  v           : VECTOR
+  inv         : VECTOR
+  unit_v      : VECTOR  
+  inv_unit_v  : VECTOR   
+  seg_v       : VECTOR 
+BEGIN 
+  s_v = PositionToVector_(sp)                  -- Get the Weld Vector and Inverse
+  e_v = PositionToVector_(ep)
+
+  v = (e_v - s_v)
+  inv = (s_v - e_v)
+
+  mag_v = SQRT(v @ v)                          -- Get the magnitude of the Weld Vector and inverse magnitude
+  inv_mag_v = SQRT(inv @ inv)
+
+  check_seg = (sglen * seg_num)
+
+  IF (check_seg > (mag_v * 0.75))THEN
+    status = 3
+    GO TO GENWELD_END
+  ENDIF
+
+  adj_len = (mag_v - (sglen * seg_num))       -- Subtract the total magnitude of segment from AB magnitude
+
+  IF ((sgpitch - 1) <= 0)THEN
+    status = 4
+    GO TO GENWELD_END
+  ENDIF
+
+  adj_len = (adj_len/(sgpitch-1))             -- This will find the distance to evenly space seg across start and end    
+  unit_v = (v/mag_v)                          -- Find the unit vector for AB  
+  seg_v =  (unit_v * sglen)
+  btwn_v = (unit_v * adj_len)                 -- The magnitude of each seg is segment length * unit vector 
+
+  inv_unit_v = (inv / inv_mag_v) 
+  vo = (inv_unit_v * sgoff)                   -- The magnitude of offset * unit vector   
+  
+  seg_off = sp
+  seg_off.X = vo.X
+  seg_off.Y = vo.Y
+  seg_off.Z = vo.Z
+  seg_off.W = 0.0
+  seg_off.P = 0.0
+  seg_off.R = 0.0
+  
+  IF debug = 1 THEN
+    OPEN FILE klfile('AP',TD_LOG)
+    WRITE klfile('Unit Vector             =  ', unit_v::9::4, CR)
+    WRITE klfile('Magnitude               =  ', mag_v::9::4, CR)
+    WRITE klfile('Magnitude all segment   =  ', check_seg::9::4, CR)
+    WRITE klfile('Inverse Unit Vector     =  ', inv_unit_v::9::4, CR)
+    WRITE klfile('MagT of between moves   =  ', btwn_v::9::4, CR)
+    WRITE klfile('Vector Offset           =  ', vo::9::4, CR)
+    WRITE klfile(CR)
+    WRITE klfile('Starting Point          =  ', sp, CR)
+    WRITE klfile('Ending Point            =  ', ep, CR)
+    WRITE klfile(CR)
+
+    CLOSE FILE klfile
+
+    --OPEN FILE cFile('RW', CSV_LOG)
+    --WRITE cFile(sp.X::9::3, ',', sp.Y::9::3,CR)  
+  ENDIF
+  
+  segcount = 0
+  FOR i = 1 TO seg_num DO
+    IF i = 1 THEN
+      seg_start[i] = sp
+     ELSE     
+      seg_start[i] = seg_end[i-1]       
+      seg_start[i].X = seg_end[i-1].X + btwn_v.X
+      seg_start[i].Y = seg_end[i-1].Y + btwn_v.Y     
+      seg_start[i].Z = seg_end[i-1].Z + btwn_v.Z     
+    ENDIF
+    segcount = segcount + 1
+    parent_array[segcount] = seg_start[i]    
+
+    seg_end[i] = seg_start[i]
+    seg_end[i].X = seg_end[i].X + (seg_v.X)
+    seg_end[i].Y = seg_end[i].Y + (seg_v.Y)
+    seg_end[i].Z = seg_end[i].Z + (seg_v.Z)
+
+    segcount = segcount + 1
+    parent_array[segcount] = seg_end[i]    
+         
+  -- IF debug = 1 THEN
+  --   OPEN FILE klfile('AP',TD_LOG)
+  --   WRITE klfile('Start Seg', seg_start[i],CR)
+  --   WRITE klfile(CR)
+  --   WRITE klfile('End Seg', seg_end[i],CR)
+  --   WRITE klfile(CR)
+  --   CLOSE FILE klfile
+    
+  --   -- WRITE cFile(seg_start[i].X::9::3,',',seg_start[i].Y::9::3, CR)
+  --   -- WRITE cFile(seg_end[i].X::9::3,',',seg_end[i].Y::9::3, CR)
+  --   -- CLOSE FILE cFile
+  -- ENDIF
+   
+  ENDFOR
+  -- Start and End point passed as args
+  sp = seg_start[1]
+  ep = seg_end[1]
+  -- IF debug = 1 THEN
+  --   WRITE cFile(ep.X::9::3, ',', ep.Y::9::3,CR)
+  -- ENDIF
+
+  GENWELD_END::
+
+END GenSweldSegments_
+
+------------------------------------------------------------------ 
+ROUTINE InitPos_( src: XYZWPR; n1, n2, n3, flip, up, front: INTEGER) 
+--Initializes a Position with CONFIG
+------------------------------------------------------------------ 
+VAR
+	status:		  INTEGER
+	flipBool:	  BOOLEAN
+	upBool:		  BOOLEAN
+	frontBool:	BOOLEAN
+
+BEGIN
+	--Get UFRAME
+	src = $UFRAME
+		
+	-- Init Pos
+	src.x = 0.000
+	src.y = 0.000
+	src.z = 0.000
+	src.w = 0.000
+	src.p = 0.000
+	src.r = 0.000
+	
+	-- Init CFG Turns
+	src.CONFIG_DATA.CFG_TURN_NO1 = n1	
+	src.CONFIG_DATA.CFG_TURN_NO2 = n2	
+	src.CONFIG_DATA.CFG_TURN_NO3 = n3		
+
+	-- Init CFG 
+	src.CONFIG_DATA.CFG_FLIP = CvnIntBool_(flip)			-- false = N; true = F
+	src.CONFIG_DATA.CFG_UP = CvnIntBool_(up) 			    -- false  = D; true = U
+	src.CONFIG_DATA.CFG_FRONT = CvnIntBool_(front) 		-- false = B; true = T
+
+END InitPos_
+
+------------------------------------------------------------------  
+ROUTINE u_GetUtUfPos(pos_in: XYZWPR): POSITION -- get current position of active utool and uframe
+------------------------------------------------------------------  
+BEGIN
+	-- P = UF ^ - 1 : R : UT
+
+ RETURN(INV($MNUFRAME[1, $MNUFRAMENUM[1]]) :	pos_in :
+	$MNUTOOL[1, $MNUTOOLNUM[1]])
+	-- RETURN(INV($MNUFRAME[1, $MNUFRAMENUM[1]]) :	CURPOS(0,0) :
+	-- 	$MNUTOOL[1, $MNUTOOLNUM[1]])
+END u_GetUtUfPos
+-- WRITE TPSTATUS(CR,' ',CR)
+-- WRITE TPPROMPT(CR,' ',CR)
+-- WRITE TPFUNC (CR,' ',CR)
+-- FORCE_SPMENU(TP_PANEL,SPI_TPUSER,1) -- Force the USER menu screen
+------------------------------------------------------------------
+ROUTINE CheckUnitialized_
+------------------------------------------------------------------
+BEGIN
+  IF(UNINIT(st_pr))THEN
+    st_pr = 1
+  ENDIF
+
+  IF(UNINIT(en_pr))THEN
+    en_pr = 2
+  ENDIF
+
+  IF(UNINIT(sglen))THEN
+    sglen = 6.35
+  ENDIF
+
+  IF(UNINIT(sgpitch))THEN
+    sgpitch = 3
+  ENDIF
+
+    IF(UNINIT(wprocedure))THEN
+    wprocedure = 96
+  ENDIF
+
+  IF(UNINIT(wsched))THEN
+    wsched = 1
+  ENDIF
+
+  IF(UNINIT(sgspd))THEN
+    sgspd = 10
+  ENDIF
+
+  IF(UNINIT(sgspdunit))THEN
+    sgspdunit = MMSEC
+  ENDIF
+
+  IF(UNINIT(tp_name))THEN
+    tp_name = 'UNINIT'
+  ENDIF
+
+  IF(UNINIT(vers))THEN
+    vers = 'v0.0.0'
+  ENDIF
+  
+  IF(UNINIT(sgoff))THEN
+    sgoff = 2.0
+  ENDIF
+
+  IF(UNINIT(dbg_enb))THEN
+    dbg_enb = TRUE
+  ENDIF
+
+END CheckUnitialized_
+
+------------------------------------------------------------------
+ROUTINE IntializeProgram_
+------------------------------------------------------------------
+BEGIN
+  klstat = 0 
+  parent_recv_strobe = 0
+  spd_real = 0.001
+  is_uninit = FALSE
+  time_out = FALSE
+
+  InitPos_(start_pt,0,0,0,0,1,0)
+  InitPos_(end_pt,0,0,0,0,1,0)
+  InitPos_(sgstart,0,0,0,0,1,0)
+  InitPos_(swstart,0,0,0,0,1,0)
+END IntializeProgram_
+
+------------------------------------------------------------------
+ROUTINE IntializeChildProcess_
+------------------------------------------------------------------
+BEGIN
+  SET_VAR(entry, TP_GENERATOR, 'tp_start', sgstart, status)
+  SET_VAR(entry, TP_GENERATOR, 'seg_array', parent_array, status)
+  SET_VAR(entry, TP_GENERATOR, 'tp_segoff', seg_off, status)
+  SET_VAR(entry, TP_GENERATOR, 'total_segments', segcount, status)
+  SET_VAR(entry, TP_GENERATOR, 'tp_wprocedure', wprocedure, status)
+  SET_VAR(entry, TP_GENERATOR, 'tp_wsched', wsched, status)
+  SET_VAR(entry, TP_GENERATOR, 'tp_sgspd', sgspd, status)
+  SET_VAR(entry, TP_GENERATOR, 'tp_spdunit', sgspdunit, status)
+  SET_VAR(entry, TP_GENERATOR, 'tpp_name', tp_name, status)
+  SET_VAR(entry, TP_GENERATOR, 'tpp_vers', vers, status)
+  SET_VAR(entry, TP_GENERATOR, 'debug', debug, status)
+END IntializeChildProcess_
+
+------------------------------------------------------------------
+ROUTINE PostMsgToTpScreen_(from_string, msg_string: STRING) FROM IPL_FANUC_SWELD_SET
+------------------------------------------------------------------
+
+--******************************************************************************************
+--                                               MAIN                              
+--******************************************************************************************
+BEGIN
+  CheckUnitialized_
+
+  IntializeProgram_
+
+  IF dbg_enb = TRUE THEN
+    debug = 1    
+    LogStart_(klfile,'IPL_FANUC_SWELD_SET', debug)
+  ELSE
+    debug = 0
+  ENDIF  
+  ------------------------------------------------------------------------GET PARAMS PASSED FROM IPL
+  GET_TPE_PRM(1, PRM_INT, st_pr, paramReal, paramString, status)
+  GET_TPE_PRM(2, PRM_INT, en_pr, paramReal, paramString, status)
+
+  --GET PARAM EVEN IF VALUE NOT PASSED AS REAL
+  GET_TPE_PRM(3, PRM_REAL, paramInteger, sglen, paramString, status)
+  IF (sglen = 0.000)THEN
+    sglen = paramInteger
+  ENDIF    
+
+  GET_TPE_PRM(4, PRM_INT, sgpitch, paramReal, paramString, status)
+  GET_TPE_PRM(5, PRM_INT, wprocedure, paramReal, paramString, status)
+  GET_TPE_PRM(6, PRM_INT, wsched, paramReal, paramString, status)
+  GET_TPE_PRM(7, PRM_INT, sgspd, paramReal, paramString, status)
+  GET_TPE_PRM(8, PRM_INT, sgspdunit, paramReal, paramString, status)
+  GET_TPE_PRM(9, PRM_STRING, paramInteger, paramReal, TP_NAME, status)
+  SET_STR_REG(25, TP_NAME, status)
+  SET_SREG_CMT(25, 'SWELD_TP', status)
+
+  --Get Start and End
+  start_pt = GET_POS_REG(st_pr, status)
+  IF (UNINIT(start_pt)) THEN    
+    klstat = 1
+    GO TO ERROR_LABEL
+  ENDIF
+
+  end_pt = GET_POS_REG(en_pr, status)  
+  IF (UNINIT(end_pt)) THEN
+    klstat = 2
+    GO TO ERROR_LABEL
+  ENDIF 
+
+  --ASSIGN POSITIONS FOR GENERATING SEGMENTS
+  sgstart =  start_pt
+  swstart =  sgstart               
+  sgend = end_pt 
+
+  --(starting position, ending position, number of welds, weld length, status)
+  GenSweldSegments_(start_pt, end_pt, sgpitch, sglen, klstat)
+  IF(klstat <> SUCCESS)THEN
+    GO TO ERROR_LABEL
+  ENDIF
+
+  IF debug = 1 THEN
+    OPEN FILE klfile('AP', TD_LOG)
+    WRITE klfile('Segment Count_uWeld = ', IntToString(segcount),CR)
+  FOR j = 1 TO (segcount) DO
+    WRITE klfile(IntToString(j), '= ', parent_array[j], CR)
+  ENDFOR
+    CLOSE FILE klfile
+  ENDIF
+
+  IntializeChildProcess_
+  ------------------------------------------------------------------------SYNC WITH TP GENERATOR
+  CLEAR_SEMA(1)                                                         -- INIT SEMAPHORES
+  CLEAR_SEMA(2)
+  CLEAR_SEMA(3) 
+
+  RUN_TASK(TP_GENERATOR, 0, FALSE, TRUE, 1, status) 
+
+  PEND_SEMA(1, MAX_WAIT, time_out)                                      -- DECREMENT SEMAPHORE AND WAIT = 0
+  SET_VAR(entry, TP_GENERATOR, 'child_recv_strobe', 1, status)          -- SET STROBE FOR CHILD TO WORK
+  LogAppend_(klfile, LOG_HEADER, 'TP Strobe Sent', debug) 
+
+  POST_SEMA(2)                                                          -- INCREMENT SEMAPHORE FOR CHILD
+  PEND_SEMA(3, MAX_WAIT, time_out)                                      -- DECREMENT SEMAPHORE AND WAIT = 0
+
+  IF(parent_recv_strobe <> SUCCESS)THEN
+    klstat = 3
+  ELSE
+    LogAppend_(klfile, LOG_HEADER, 'TP Strobe Received', debug)
+  ENDIF
+  -----------------------------------------------------------------------ERROR LABEL
+  ERROR_LABEL::
+  SELECT klstat OF
+    CASE(1):
+      LogAppend_(klfile, LOG_ERROR_HEADER, START_PR_ERRMSG, debug)
+      PostMsgToTpScreen_(ERROR_SETNAME, START_PR_ERRMSG)
+      
+    CASE(2):
+      LogAppend_(klfile, LOG_ERROR_HEADER, END_PR_ERRMSG, debug)
+      PostMsgToTpScreen_(ERROR_SETNAME, END_PR_ERRMSG)
+
+    CASE(3):
+      LogAppend_(klfile, LOG_ERROR_HEADER, SEGMENT_LEN_ERRMSG, debug)
+      PostMsgToTpScreen_(ERROR_SETNAME, SEGMENT_LEN_ERRMSG)
+
+    CASE(4):
+      LogAppend_(klfile, LOG_ERROR_HEADER, SEGMENT_PITCH_ERRMSG, debug)
+      PostMsgToTpScreen_(ERROR_SETNAME, SEGMENT_PITCH_ERRMSG)
+
+    ELSE:
+      LogAppend_(klfile, LOG_HEADER, NORMAL_FINISH, debug)           
+      
+  ENDSELECT  
+   CNV_INT_STR(klstat, 16, 16, msg)
+   LogAppend_(klfile, 'KL status = ', msg , debug)
+  ----------------------------------------------------------------------END
+  FINAL_END::
+  IF dbg_enb = TRUE THEN
+     LogEnd(klfile, 'IPL_FANUC_SWELD_SET END PROG') 
+     COPY_FILE(TD_LOG, USER_LOG, TRUE, FALSE, status)  
+     DELETE_FILE(TD_LOG, FALSE, status)   
+  ENDIF
+
+END IPL_FANUC_SWELD_SET

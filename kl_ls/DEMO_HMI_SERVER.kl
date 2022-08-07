@@ -1,0 +1,128 @@
+------------------------------------------------------------------
+--   KL PROGRAM:   DEMO_HMI_SEVER
+
+--   SYNOPSIS:     Handles Requests to Run TP programs
+--   PARAMETERS:   Through HTTP GET Request
+--
+--
+--
+--   AUTHOR:       JDM
+
+--   DATE:         2022.07.05
+
+--   COMPANY:      FANUC
+
+------------------------------------------------------------------
+PROGRAM DEMO_HMI_SERVER
+------------------------------------------------------------------
+%COMMENT = 'SWeld KL'
+%ALPHABETIZE
+%NOLOCKGROUP                            --Specifies no motion is locked
+%NOABORT = ERROR+COMMAND+TPENABLE 
+%NOPAUSE = ERROR+COMMAND+TPENABLE      --Specifies Mask for Pausing
+                                        --ERROR: ignore pause severity
+                                        --COMMAND: ignore pause command
+                                        --TPENABLE: ignore paused req w/TP enabled
+--%DELAY                                --Time to delay program
+%NOBUSYLAMP
+%ENVIRONMENT REGOPE
+%ENVIRONMENT SYSDEF
+%ENVIRONMENT KCLOP
+%ENVIRONMENT IOSETUP
+%ENVIRONMENT MULTI
+%INCLUDE KLEVKEYS                      --Key code defininition file
+%INCLUDE KLEVKMSK                      --Mask values used for form manager term_masks
+%INCLUDE KLEVCCDF                      --Character code constants 
+%INCLUDE KLIOUOP                       --Constants used for UOP I/O
+%INCLUDE KLIOTYPS                      --Constants defining I/O types
+------------------------------------------------------------------
+CONST                                  --Most constants commonly used. Comment out if not needed
+  SUCCESS      = 0                     --Used for Arg status
+  NULL_STRING  = ''                    --Empty String
+  SYS_VAR      = '*SYSTEM*'            --Constant for using System variables
+  USER_LOG     = 'UD1:USERLOG.TXT'     --Pipe Logging
+  PIPE_LOG     = 'PIP:PIPELOG.DAT'     --Text File Logging
+  TP_EXTENSION = 'TP'
+  SWELD_START  = 1
+  SWELD_END    = 2
+
+VAR
+-- Declare HTML parameter names and value
+  index     : STRING[12]
+  ptype    : STRING[12]
+  pname    : STRING[12]
+
+-- These are duplicates that will be used to 
+-- convert the input parameters to Upper case
+
+  uindex  : STRING[12]
+  uptype   : STRING[12]
+  upname   : STRING[12]
+  -- Misc Variables
+
+  kcommand : STRING[126]
+ 
+  value_i :     INTEGER
+  value_r :     REAL
+  index_i :     INTEGER
+  ptype_i  :    INTEGER
+  pname_i  :    INTEGER
+  status  :     INTEGER
+  i       :     INTEGER
+  index_p :     INTEGER
+  entry   :     INTEGER
+  axis_lim:     INTEGER
+  ovr_trv:      INTEGER
+  prog_index:   INTEGER
+  port_value:   INTEGER
+  t_pos:        XYZWPREXT  
+  return_code:  INTEGER
+  file1:        FILE
+
+  ------------------------------------------------------------------
+  ROUTINE u_ToUpper(p_char: INTEGER): STRING  --Comment
+  ------------------------------------------------------------------
+  BEGIN
+    IF (p_char > 96) and (p_char < 123) THEN
+      p_char = p_char - 32
+    ENDIF
+    RETURN (chr(p_char))
+  END u_ToUpper
+  --------------------------------------------------End of u_ToUpper---
+------------------------------------------------------------------
+--                              MAIN                              
+------------------------------------------------------------------
+BEGIN
+  IF uninit(index)THEN
+    index = '';
+  ENDIF
+
+  IF uninit(ptype)THEN 
+    ptype = '';
+  ENDIF
+
+  IF uninit(pname)THEN 
+    pname = '';
+  ENDIF
+
+  
+  
+  GET_PORT_VAL(io_tpin, 249, port_value, status)
+
+  IF (port_value = 1)THEN
+    WRITE('TP ENABLED: NO RUN',CR)
+    GO TO NO_RUN
+  ELSE
+    CALL_PROG(pname, prog_index)
+    --RUN_TASK(pname, 0, FALSE, FALSE, 1, status)
+    
+  ENDIF
+
+  
+
+
+  NO_RUN::
+
+  return_code = 204
+  
+END DEMO_HMI_SERVER

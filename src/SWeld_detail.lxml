@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="SJIS"?>
+<editor>
+  <instruction type="normal" section="cat_plugin">
+    <iconfile>sweld-instrc-icon.png</iconfile>
+    <icontext>StitchWeld</icontext>
+    <program>ipl_fanuc_sweld_klset.tp</program>
+    <detail>
+      <title>StitchWeld</title>
+      <src>SWeld_detail.stm</src>
+      <init param="1,2,6.3,3,1,1,25,1,'DEFAULT_TP'"></init>
+      <disp>dispAdvInstData</disp>
+    </detail>
+  </instruction>
+</editor>
