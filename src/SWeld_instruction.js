@@ -27,7 +27,7 @@ const MM_SEC = "0";
 const INCH_MIN = "3";
 const DEFAULT_SPEED_MM = "25";
 const DEFAULT_SPEED_INCH = "60";
-const K_VERS = "v1.80";
+const K_VERS = "v2.00";
 
 var err = {
   errName: "",
@@ -100,12 +100,12 @@ class WeldArgs {
   }
 }
 
-//===============================================================================
+//=====================================
 /**
  * Instantiates WeldArgs Object.
  * @constant {WeldArgs} param This is the main object for the instruction.
  */
-//===============================================================================
+//=====================================
 const param = new WeldArgs("0", "0", "0.0", "0", "0", "0", "0", "0", "empty");
 
 /*============================E V E N T S============================*/
@@ -129,13 +129,13 @@ document
   .addEventListener("change", callBackSpeedSelect);
 document.getElementById("setName").addEventListener("change", callBackTpName);
 
-//===============================================================================
+//=====================================
 /** Ensures the user supplied string does not start with a Number.
  * @function checkvalidTpName
  * @param {string} str Input user supplied TPP Name.
  * @returns {boolean} True if the string is a Valid TPP Name.
  */
-//===============================================================================
+//=====================================
 function checkValidTpName(str) {
   let regexPattern = /^[0-9]/;
   let invalid = regexPattern.test(str);
@@ -176,47 +176,55 @@ function parameterCheck(inputValue) {
     inrange = false;
     inputValue.value = inputValue.oldvalue;
   }
+
   console.log("check = ", inrange);
   return inrange;
 }
 
-//===============================================================================
+//=====================================
 /**
  * Called when users drags the instruction into the timeline.
  * @param {string} argStr The initial parameters are parsed in from the instruction XML.
  * @returns boolean
  */
-//===============================================================================
-function dropAdvInstData(argStr) {
-  if (argStr.length === 0) {
-    return false;
-  }
-  var params = argStr.split(",");
-  var tempPrm = params[8].replace(/'/g, "");
-  params[8] = tempPrm;
+//=====================================
+// function dropAdvInstData(argStr) {
+//   if (argStr.length === 0) {
+//     return false;
+//   }
+//   var params = argStr.split(",");
+//   var tempPrm = params[8].replace(/'/g, "");
+//   params[8] = tempPrm;
 
-  top.ihmi_setVar(KAREL_NAME, "version", K_VERS);
+//   //top.ihmi_setVar(KAREL_NAME, "version", K_VERS);
 
-  param.updateParams(params);
+//   param.updateParams(params);
 
-  updateDisplay();
+//   updateDisplay();
 
-  return true;
-}
+//   return true;
+// }
 
-//===============================================================================
+//=====================================
 /**
  * This function is the interface for displaying intuction details.
  *
  * @param {string} argStr Current parameters passed as args to the instruction.
  * @returns boolean
  */
-//===============================================================================
+//=====================================
 function dispAdvInstData(argStr) {
   if (argStr.length === 0) {
     console.log("argStr for dispAdvInstData length was zero.");
     return false;
   }
+  var params = argStr.split(",");
+  var tempPrm = params[8].replace(/'/g, "");
+  params[8] = tempPrm;
+
+  param.updateParams(params);
+
+  updateDisplay();
   console.log(dispAdvInstData.name, "finished.");
 
   return true;
@@ -234,7 +242,7 @@ function updateDisplay() {
   $("#setSpeed").val(param.speed);
   $("#speedSelect").val(param.speedunit);
   $("#setName").val(param.tpname);
-  callBackUpdateInstrParam();
+  //callBackUpdateInstrParam();
 }
 
 function callBackErrorModal(name, cause, action) {
@@ -294,25 +302,28 @@ function touchUpCancel(btn) {
   MODAL.close();
 }
 
-//===============================================================================
+//=====================================
 /**
- * HTTP Request to a Karel routine.  It get's the current position,
- * and records to the PR[value].
+ * HTTP Request to a Karel routine.
+ * It get's the current position, and
+ * records to the PR[value].
  * @param {integer} value Index of the PR to touchup.
  */
-//===============================================================================
+//=====================================
 function httpGetPrTouchup(value) {
   var xhttp = new XMLHttpRequest();
   xhttp.open("GET", KAREL_URL + value, true);
   xhttp.send();
 }
 
-//===============================================================================
+//=====================================
 /**
- * This uses the latest parameters and creates one argument string for the Instruction.
- * @param {WeldArgs} argsObject This object holds the current parameters set by the Instruction display.
+ * This uses the latest parameters and
+ * creates one argument string for the Instruction.
+ * @param {WeldArgs} argsObject
+ * This object holds the current parameters set by the Instruction display.
  */
-//===============================================================================
+//=====================================
 function callBackUpdateInstrParam(argsObject) {
   var paramstring = JSON.parse(JSON.stringify(Object.values(argsObject)));
 
@@ -324,30 +335,29 @@ function callBackUpdateInstrParam(argsObject) {
   let statusString = INSTR_NAME + "(" + paramstring.toString() + ")";
   $("#statusBox").html(statusString);
 
-  parent.setInstructionParam(paramstring.toString());
+  //parent.setInstructionParam(paramstring.toString());
 }
 
-/*
- =========================================================================
- @function name        : callBackStartPR
- @argument[targetElm]  : 
- @description          : Update PR index and set instruction param
- @return               : none
- =========================================================================
-*/
+//=====================================
+/**
+ * Call back User input for starting PR.
+ * @returns If user input is not valid.
+ */
+//=====================================
 function callBackStartPR() {
   let success = parameterCheck(this);
 
   if (!success) {
     err.errName = "Starting PR Index";
     err.errCause = "Index not Valid.";
-    err.errAction = "Enter an integer between 1 and 100.";
+    err.errAction = `Enter an integer between ${this.min} and ${this.max}.`;
 
     callBackErrorModal(err.errName, err.errCause, err.errAction);
     return;
   } else {
     param.start = this.value;
-    callBackUpdateInstrParam();
+    callBackUpdateInstrParam(param);
+    updateDisplay();
   }
 }
 
@@ -364,13 +374,14 @@ function callBackEndPR() {
   if (!success) {
     err.errName = "Ending PR Index";
     err.errCause = "Index not Valid.";
-    err.errAction = "Enter an integer between 1 and 100.";
+    err.errAction = `Enter an integer between ${this.min} and ${this.max}.`;
 
     callBackErrorModal(err.errName, err.errCause, err.errAction);
     return;
   } else {
     param.end = this.value;
-    callBackUpdateInstrParam();
+    callBackUpdateInstrParam(param);
+    updateDisplay();
   }
 }
 
@@ -388,12 +399,13 @@ function callBackWeldLength() {
   if (!success) {
     err.errName = "Weld Length";
     err.errCause = "Length not Valid.";
-    err.errAction = "Enter an integer between " + this.min + " and" + this.max;
+    err.errAction = `Enter an integer between ${this.min} and ${this.max}.`;
 
     callBackErrorModal(err.errName, err.errCause, err.errAction);
   } else {
     param.wlength = this.value;
-    callBackUpdateInstrParam();
+    callBackUpdateInstrParam(param);
+    updateDisplay();
   }
 }
 
@@ -411,14 +423,17 @@ function callBackWeldPitch() {
   if (!success) {
     err.errName = "Weld Pitch";
     err.errCause = "Pitch number not Valid.";
-    err.errAction = "Enter an integer between ${MIN_PITCH} and ${MAX_PITCH}";
+    err.errAction = `Enter an integer between ${this.min} and ${this.max}.`;
+    // err.errAction =
+    //   "Enter an integer between " + MIN_PITCH + " and " + MAX_PITCH;
 
     callBackErrorModal(err.errName, err.errCause, err.errAction);
 
     return;
   } else {
     param.wpitch = this.value;
-    callBackUpdateInstrParam();
+    callBackUpdateInstrParam(param);
+    updateDisplay();
   }
 }
 
@@ -433,15 +448,16 @@ function callBackWeldPitch() {
 function callBackWeldProcedure() {
   let success = parameterCheck(this);
   if (!success) {
-    err.errName = "Weld Pitch";
-    err.errCause = "Pitch number not Valid.";
-    err.errAction = "Enter an integer between ${MIN_PITCH} and ${MAX_PITCH}";
+    err.errName = "Weld Procedure";
+    err.errCause = "Weld Procedure number not Valid.";
+    err.errAction = `Enter an integer between ${this.min} and ${this.max}.`;
 
     callBackErrorModal(err.errName, err.errCause, err.errAction);
     return;
   } else {
     param.wprocedure = this.value;
-    callBackUpdateInstrParam();
+    callBackUpdateInstrParam(param);
+    updateDisplay();
   }
 }
 
@@ -454,18 +470,18 @@ function callBackWeldProcedure() {
  =========================================================================
 */
 function callBackWeldSchedule() {
-  if (this.value < 1 || this.value > 96) {
-    err.errName = "Weld Pitch";
-    err.errCause = "Pitch number not Valid.";
-    err.errAction = "Enter an integer between ${MIN_PITCH} and ${MAX_PITCH}";
+  let success = parameterCheck(this);
+  if (!success) {
+    err.errName = "Weld Schedule";
+    err.errCause = "Weld Schedule not Valid.";
+    err.errAction = `Enter an integer between ${this.min} and ${this.max}.`;
 
-    $("#setSched").val(1);
     callBackErrorModal(err.errName, err.errCause, err.errAction);
-
     return;
   } else {
     param.wschedule = this.value;
-    callBackUpdateInstrParam();
+    callBackUpdateInstrParam(param);
+    updateDisplay();
   }
 }
 
@@ -478,11 +494,14 @@ function callBackWeldSchedule() {
  =========================================================================
 */
 function callBackSpeed() {
+  let setValidMillimeterSpeed = `Enter an integer between ${MIN_SPEED} and ${MAX_SPEED_MM}.`;
+  let setValidInchSpeed = `Enter an integer between ${MIN_SPEED} and ${MAX_SPEED_INCH}.`;
+
   if (param.speedunit === MM_SEC) {
     if (this.value <= MIN_SPEED || this.value >= MAX_SPEED_MM) {
       err.errName = "Speed Instruction";
       err.errCause = "The mm/sec Value is too large.";
-      err.errAction = "Enter an integer between 1 and 250.";
+      err.errAction = setValidMillimeterSpeed;
 
       $("#setSpeed").val(DEFAULT_SPEED_MM);
       callBackErrorModal(err.errName, err.errCause, err.errAction);
@@ -494,7 +513,7 @@ function callBackSpeed() {
     if (this.value <= MIN_SPEED || this.value >= MAX_SPEED_INCH) {
       err.errName = "Speed Instruction";
       err.errCause = "The inch/min Value is too large.";
-      err.errAction = "Enter an integer between 1 and 590.5.";
+      err.errAction = setValidInchSpeed;
 
       $("#setSpeed").val(DEFAULT_SPEED_INCH);
       callBackErrorModal(err.errName, err.errCause, err.errAction);
@@ -502,7 +521,8 @@ function callBackSpeed() {
     }
   } else {
     param.speed = this.value;
-    callBackUpdateInstrParam();
+    callBackUpdateInstrParam(param);
+    updateDisplay();
   }
 }
 
@@ -534,7 +554,8 @@ function callBackSpeedSelect() {
   $("#setSpeed").val(param.speed);
 
   param.speedunit = this.value;
-  callBackUpdateInstrParam();
+  callBackUpdateInstrParam(param);
+  updateDisplay();
 }
 
 /*
@@ -580,7 +601,8 @@ function callBackTpName() {
     return;
   } else {
     param.tpname = this.value;
-    callBackUpdateInstrParam();
+    callBackUpdateInstrParam(param);
+    updateDisplay();
   }
 
   err.errName = "none";
@@ -648,10 +670,16 @@ function insertBeforeTabEnd(parentNode, childNode) {
   }
 }
 
+function callTestUpdate() {
+  //dropAdvInstData("10,20,6.3,3,96,1,25,0,'DroppedIn'"); // U S E D  F O R  T E S T I N G
+  dispAdvInstData("10,20,6.3,3,96,1,25,0,'DroppedIn'"); // U S E D  F O R  T E S T I N G
+  callBackUpdateInstrParam(param);
+}
+
 /*============================D O C  L O A D I N G============================*/
 function pageHasLoaded() {
   console.log(document.title, "--Loaded");
-  //dropAdvInstData("10,20,6.3,3,96,1,25,0,'DroppedIn'"); // U S E D  F O R  T E S T I N G
+  callTestUpdate();
 }
 
 function pageLoad(callback) {
